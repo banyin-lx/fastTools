@@ -1,0 +1,158 @@
+<Window x:Class="FastTools.App.Views.TrayMenuWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="FastTools Tray Menu"
+        AllowsTransparency="True"
+        Background="Transparent"
+        FontFamily="Segoe UI Variable Text"
+        ResizeMode="NoResize"
+        ShowActivated="True"
+        ShowInTaskbar="False"
+        SizeToContent="WidthAndHeight"
+        Topmost="True"
+        WindowStartupLocation="Manual"
+        WindowStyle="None">
+    <Window.Resources>
+        <Style x:Key="TrayMenuButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="Padding" Value="8,7" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="10">
+                            <ContentPresenter Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root"
+                                        Property="Background"
+                                        Value="{DynamicResource SelectionBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root"
+                                        Property="Background"
+                                        Value="{DynamicResource ElevatedBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Border Margin="8"
+            Padding="8"
+            Background="{DynamicResource ChromeBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="16">
+        <StackPanel Width="132">
+            <DockPanel Margin="0,0,0,8">
+                <Border Width="28"
+                        Height="28"
+                        Background="{DynamicResource ElevatedBrush}"
+                        CornerRadius="9">
+                    <Image Width="16"
+                           Height="16"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Source="pack://application:,,,/Assets/fastTools.png" />
+                </Border>
+                <TextBlock Margin="8,0,0,0"
+                           VerticalAlignment="Center"
+                           FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               Text="FastTools" />
+            </DockPanel>
+
+            <Button Click="OpenButton_Click"
+                    Style="{StaticResource TrayMenuButtonStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center"
+                               FontFamily="Segoe Fluent Icons"
+                               FontSize="14"
+                               Foreground="{DynamicResource AccentBrush}"
+                               Text="&#xE8A7;" />
+                    <TextBlock Grid.Column="1"
+                               Margin="8,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="13"
+                               Text="{Binding [Tray.Open]}" />
+                </Grid>
+            </Button>
+
+            <Button Click="SettingsButton_Click"
+                    Style="{StaticResource TrayMenuButtonStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center"
+                               FontFamily="Segoe Fluent Icons"
+                               FontSize="14"
+                               Foreground="{DynamicResource AccentBrush}"
+                               Text="&#xE713;" />
+                    <TextBlock Grid.Column="1"
+                               Margin="8,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="13"
+                               Text="{Binding [Tray.Settings]}" />
+                </Grid>
+            </Button>
+
+            <Button Click="RefreshButton_Click"
+                    Style="{StaticResource TrayMenuButtonStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center"
+                               FontFamily="Segoe Fluent Icons"
+                               FontSize="14"
+                               Foreground="{DynamicResource AccentBrush}"
+                               Text="&#xE72C;" />
+                    <TextBlock Grid.Column="1"
+                               Margin="8,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="13"
+                               Text="{Binding [Tray.Refresh]}" />
+                </Grid>
+            </Button>
+
+            <Border Height="1"
+                    Margin="4,6"
+                    Background="{DynamicResource BorderBrush}" />
+
+            <Button Click="ExitButton_Click"
+                    Style="{StaticResource TrayMenuButtonStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center"
+                               FontFamily="Segoe Fluent Icons"
+                               FontSize="14"
+                               Foreground="{DynamicResource DangerBrush}"
+                               Text="&#xE8BB;" />
+                    <TextBlock Grid.Column="1"
+                               Margin="8,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="13"
+                               Text="{Binding [Tray.Exit]}" />
+                </Grid>
+            </Button>
+        </StackPanel>
+    </Border>
+</Window>
