@@ -9,7 +9,8 @@
         Icon="pack://application:,,,/Assets/fastTools.png"
         AllowsTransparency="True"
         Background="Transparent"
-        FontFamily="Segoe UI Variable Text"
+        FontFamily="Microsoft YaHei UI"
+        FontSize="14"
         MaxHeight="520"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
@@ -42,8 +43,6 @@
                     <TextBlock x:Name="SearchPlaceholder"
                                Margin="2,0,0,0"
                                VerticalAlignment="Center"
-                               FontFamily="Microsoft YaHei UI"
-                               FontSize="16"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                IsHitTestVisible="False"
@@ -159,8 +158,7 @@
                                     </Border>
 
                                     <StackPanel Grid.Column="1">
-                                        <TextBlock FontSize="16"
-                                                   FontWeight="SemiBold"
+                                        <TextBlock FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextPrimaryBrush}"
                                                    Text="{Binding Title}" />
                                         <TextBlock Margin="0,4,0,0"

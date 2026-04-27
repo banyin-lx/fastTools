@@ -87,11 +87,24 @@ public sealed class HotKeyGesture
             return false;
         }
 
+        if (IsModifierKey(key.Value))
+        {
+            return false;
+        }
+
         gesture = new HotKeyGesture
         {
             Modifiers = modifiers,
             Key = key.Value,
         };
         return true;
+    }
+
+    private static bool IsModifierKey(Key key)
+    {
+        return key is Key.LeftCtrl or Key.RightCtrl or
+            Key.LeftAlt or Key.RightAlt or
+            Key.LeftShift or Key.RightShift or
+            Key.LWin or Key.RWin;
     }
 }

@@ -9,4 +9,6 @@ public sealed class PluginState
     public string Description { get; set; } = string.Empty;
 
     public bool IsEnabled { get; set; } = true;
+
+    public Dictionary<string, string> Settings { get; set; } = [];
 }

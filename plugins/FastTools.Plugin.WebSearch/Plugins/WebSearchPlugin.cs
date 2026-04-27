@@ -5,6 +5,8 @@ namespace FastTools.Plugin.WebSearch.Plugins;
 
 public sealed class WebSearchPlugin : ILauncherPlugin
 {
+    private const string DefaultEngineSettingKey = "default_engine";
+
     private static readonly IReadOnlyDictionary<string, SearchEngine> Engines =
         new Dictionary<string, SearchEngine>(StringComparer.OrdinalIgnoreCase)
         {
@@ -30,6 +32,18 @@ public sealed class WebSearchPlugin : ILauncherPlugin
 
     public string Description => "提供网址直达、默认搜索引擎搜索和搜索前缀支持。";
 
+    public PluginConfiguration GetConfiguration()
+    {
+        return new PluginConfiguration(
+        [
+            new PluginSelectSettingDefinition(
+                DefaultEngineSettingKey,
+                "默认搜索引擎",
+                ["Bing", "Google", "Baidu", "GitHub", "Bilibili"],
+                "Bing"),
+        ]);
+    }
+
     public Task<IReadOnlyList<PluginSearchItem>> QueryAsync(PluginQuery query, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(query.Text))
@@ -38,7 +52,7 @@ public sealed class WebSearchPlugin : ILauncherPlugin
         }
 
         var text = query.Text.Trim();
-        var defaultEngine = query.Settings.TryGetValue("DefaultSearchEngine", out var configuredEngine) &&
+        var defaultEngine = query.Settings.TryGetValue(DefaultEngineSettingKey, out var configuredEngine) &&
                             Engines.ContainsKey(configuredEngine)
             ? configuredEngine
             : "Bing";

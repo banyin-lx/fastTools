@@ -18,4 +18,10 @@
     <Resource Include="..\..\png\fastTools.png" Link="Assets\fastTools.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Languages\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

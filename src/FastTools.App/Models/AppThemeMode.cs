@@ -4,4 +4,7 @@ public enum AppThemeMode
 {
     Light,
     Dark,
+    Soft,
+    Midnight,
+    Sepia,
 }

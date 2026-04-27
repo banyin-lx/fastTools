@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputPath>..\..\src\FastTools.App\bin\$(Configuration)\net10.0-windows\Plugins\FolderIndex\</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FastTools.Plugin.Abstractions\FastTools.Plugin.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

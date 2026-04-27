@@ -77,8 +77,6 @@
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="0,1,0,1" />
-            <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
-            <Setter Property="FontSize" Value="16" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}" />
             <Setter Property="SelectionBrush" Value="{DynamicResource SelectionBrush}" />
@@ -111,13 +109,29 @@
             </Setter>
         </Style>
 
+        <Style x:Key="ModernScrollBarThumbVerticalStyle" TargetType="Thumb">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border Margin="1,0"
+                                Background="{DynamicResource AccentBrush}"
+                                CornerRadius="999"
+                                Opacity="0.35" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style TargetType="ScrollBar">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Width" Value="10" />
+            <Setter Property="Width" Value="6" />
+            <Setter Property="Margin" Value="0,4" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ScrollBar">
-                        <Grid Background="Transparent">
+                        <Grid x:Name="Root"
+                              Background="Transparent"
+                              Opacity="0.5">
                             <Track x:Name="PART_Track"
                                    IsDirectionReversed="True">
                                 <Track.DecreaseRepeatButton>
@@ -125,7 +139,7 @@
                                                   Command="ScrollBar.PageUpCommand" />
                                 </Track.DecreaseRepeatButton>
                                 <Track.Thumb>
-                                    <Thumb Style="{StaticResource ModernScrollBarThumbStyle}" />
+                                    <Thumb Style="{StaticResource ModernScrollBarThumbVerticalStyle}" />
                                 </Track.Thumb>
                                 <Track.IncreaseRepeatButton>
                                     <RepeatButton Style="{StaticResource ModernScrollBarRepeatButtonStyle}"
@@ -134,9 +148,13 @@
                             </Track>
                         </Grid>
                         <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Opacity" Value="1" />
+                            </Trigger>
                             <Trigger Property="Orientation" Value="Horizontal">
-                                <Setter Property="Height" Value="10" />
+                                <Setter Property="Height" Value="6" />
                                 <Setter Property="Width" Value="Auto" />
+                                <Setter Property="Margin" Value="4,0" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -178,31 +196,50 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ComboBox">
                         <Grid>
-                            <Border x:Name="Root"
-                                    Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="14">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <ContentPresenter Margin="{TemplateBinding Padding}"
-                                                      VerticalAlignment="Center"
-                                                      Content="{TemplateBinding SelectionBoxItem}" />
-                                    <TextBlock Grid.Column="1"
-                                               Margin="0,0,14,0"
-                                               VerticalAlignment="Center"
-                                               FontFamily="Segoe Fluent Icons"
-                                               Foreground="{DynamicResource AccentBrush}"
-                                               Text="&#xE70D;" />
-                                </Grid>
-                            </Border>
+                            <ToggleButton x:Name="ToggleButton"
+                                          Background="{TemplateBinding Background}"
+                                          BorderBrush="{TemplateBinding BorderBrush}"
+                                          BorderThickness="{TemplateBinding BorderThickness}"
+                                          ClickMode="Press"
+                                          Focusable="False"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="Root"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="14">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <ContentPresenter />
+                                                <TextBlock Grid.Column="1"
+                                                           Margin="0,0,14,0"
+                                                           VerticalAlignment="Center"
+                                                           FontFamily="Segoe Fluent Icons"
+                                                           Foreground="{DynamicResource AccentBrush}"
+                                                           Text="&#xE70D;" />
+                                            </Grid>
+                                        </Border>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                  VerticalAlignment="Center"
+                                                  HorizontalAlignment="Stretch"
+                                                  Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                  ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                                  ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                                  IsHitTestVisible="False" />
+                            </ToggleButton>
                             <Popup x:Name="Popup"
                                    AllowsTransparency="True"
                                    IsOpen="{TemplateBinding IsDropDownOpen}"
-                                   Placement="Bottom">
+                                   Placement="Bottom"
+                                   StaysOpen="False">
                                 <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
                                         Margin="0,8,0,0"
                                         Background="{DynamicResource ChromeBrush}"

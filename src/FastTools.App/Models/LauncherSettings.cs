@@ -1,3 +1,6 @@
+using FastTools.App.Infrastructure;
+using System.Text.Json.Serialization;
+
 namespace FastTools.App.Models;
 
 public sealed class LauncherSettings
@@ -6,13 +9,16 @@ public sealed class LauncherSettings
 
     public AppThemeMode ThemeMode { get; set; } = AppThemeMode.Dark;
 
-    public AppLanguage Language { get; set; } = AppLanguage.ZhCn;
+    [JsonConverter(typeof(LegacyLanguageConverter))]
+    public string Language { get; set; } = "zh-CN";
 
     public string DefaultSearchEngine { get; set; } = "Bing";
 
     public List<string> IndexedDirectories { get; set; } = [];
 
     public List<string> ApplicationDirectories { get; set; } = [];
+
+    public List<string> EverythingIndexedDirectories { get; set; } = [];
 
     public List<CustomCommandDefinition> CustomCommands { get; set; } = [];
 
@@ -58,6 +64,7 @@ public sealed class LauncherSettings
             Language = Language,
             DefaultSearchEngine = DefaultSearchEngine,
             IndexedDirectories = [.. IndexedDirectories],
+            EverythingIndexedDirectories = [.. EverythingIndexedDirectories],
             ApplicationDirectories = [.. ApplicationDirectories],
             CustomCommands = CustomCommands
                 .Select(command => new CustomCommandDefinition
@@ -78,6 +85,7 @@ public sealed class LauncherSettings
                     DisplayName = plugin.DisplayName,
                     Description = plugin.Description,
                     IsEnabled = plugin.IsEnabled,
+                    Settings = plugin.Settings?.ToDictionary(pair => pair.Key, pair => pair.Value) ?? [],
                 })
                 .ToList(),
             SearchGroupPriorities = SearchGroupPriorities
@@ -85,10 +93,37 @@ public sealed class LauncherSettings
                 {
                     Group = priority.Group,
                     Priority = priority.Priority,
+                    IsEnabled = priority.IsEnabled,
                 })
                 .ToList(),
             UsageCounts = UsageCounts.ToDictionary(pair => pair.Key, pair => pair.Value),
         };
+    }
+
+    public void EnsureDefaults()
+    {
+        if (SearchGroupPriorities is null || SearchGroupPriorities.Count == 0)
+        {
+            SearchGroupPriorities = BuildDefaultSearchGroupPriorities();
+            return;
+        }
+
+        // Merge any newly-known groups while preserving the user's existing order.
+        var existing = new HashSet<string>(
+            SearchGroupPriorities.Select(item => item.Group),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var fallback in BuildDefaultSearchGroupPriorities())
+        {
+            if (existing.Add(fallback.Group))
+            {
+                SearchGroupPriorities.Add(new SearchGroupPriority
+                {
+                    Group = fallback.Group,
+                    Priority = (SearchGroupPriorities.Count + 1) * 10,
+                });
+            }
+        }
     }
 
     public int GetPriorityForGroup(string group)
@@ -96,6 +131,13 @@ public sealed class LauncherSettings
         var configured = SearchGroupPriorities
             .FirstOrDefault(item => item.Group.Equals(group, StringComparison.OrdinalIgnoreCase));
         return configured?.Priority ?? 999;
+    }
+
+    public bool IsGroupEnabled(string group)
+    {
+        var configured = SearchGroupPriorities
+            .FirstOrDefault(item => item.Group.Equals(group, StringComparison.OrdinalIgnoreCase));
+        return configured?.IsEnabled ?? true;
     }
 
     private static List<string> BuildDefaultIndexedDirectories()

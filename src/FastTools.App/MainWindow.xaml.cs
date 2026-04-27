@@ -22,7 +22,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly LocalizationService _localizer;
     private readonly ThemeService _themeService;
     private readonly ApplicationIndexService _applicationIndexService;
-    private readonly FileIndexService _fileIndexService;
     private readonly PluginHostService _pluginHostService;
 
     private TrayIconService? _trayIconService;
@@ -42,7 +41,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         LocalizationService localizer,
         ThemeService themeService,
         ApplicationIndexService applicationIndexService,
-        FileIndexService fileIndexService,
         PluginHostService pluginHostService)
     {
         _showWindowMessageId = showWindowMessageId;
@@ -52,7 +50,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _localizer = localizer;
         _themeService = themeService;
         _applicationIndexService = applicationIndexService;
-        _fileIndexService = fileIndexService;
         _pluginHostService = pluginHostService;
 
         InitializeComponent();
@@ -69,7 +66,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         Deactivated += MainWindow_Deactivated;
         Closing += MainWindow_Closing;
-        _hotKeyService.HotKeyPressed += (_, _) => ToggleVisibility();
+        _hotKeyService.HotKeyPressed += MainHotKey_Pressed;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -130,7 +127,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public Task OpenSettingsFromTrayAsync()
     {
-        ShowLauncher();
         return OpenSettingsAsync();
     }
 
@@ -192,6 +188,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         return false;
+    }
+
+    private void MainHotKey_Pressed(object? sender, EventArgs e)
+    {
+        if (_suspendAutoHide)
+        {
+            return;
+        }
+
+        ToggleVisibility();
     }
 
     private void MainWindow_Deactivated(object? sender, EventArgs e)
@@ -416,7 +422,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private async Task RefreshIndexesAsync()
     {
         await _applicationIndexService.RefreshAsync();
-        await _fileIndexService.RefreshAsync();
         await _pluginHostService.LoadAsync();
         await _settingsStore.SaveAsync(_settingsStore.Current);
         await SearchAsync(SearchBox.Text);
@@ -425,10 +430,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private async Task OpenSettingsAsync()
     {
         _suspendAutoHide = true;
+        _hotKeyService.Unregister();
+        _isHotKeyRegistered = false;
+
         try
         {
-            var settingsWindow = new SettingsWindow(_settingsStore.Current.Clone(), _pluginHostService.Plugins, _localizer);
-            if (IsLoaded && IsVisible)
+            HideLauncher();
+
+            var settingsWindow = new SettingsWindow(_settingsStore.Current.Clone(), _pluginHostService.Plugins, _localizer, _themeService);
+            if (IsLoaded)
             {
                 settingsWindow.Owner = this;
             }
@@ -444,9 +454,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _themeService.Apply(_settingsStore.Current.ThemeMode);
             await _pluginHostService.LoadAsync();
             await _applicationIndexService.RefreshAsync();
-            await _fileIndexService.RefreshAsync();
 
-            TryRegisterHotKey(showErrorDialog: true);
             await SearchAsync(SearchBox.Text);
         }
         catch (Exception exception)
@@ -458,12 +466,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         finally
         {
+            TryRegisterHotKey(showErrorDialog: true);
             _suspendAutoHide = false;
-            if (IsVisible)
-            {
-                Activate();
-                SearchBox.Focus();
-            }
         }
     }
 

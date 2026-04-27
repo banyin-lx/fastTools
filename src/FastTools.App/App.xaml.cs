@@ -43,7 +43,6 @@ public partial class App : System.Windows.Application
         themeService.Apply(SettingsStore.Current.ThemeMode);
 
         var appIndexService = new ApplicationIndexService(SettingsStore);
-        var fileIndexService = new FileIndexService(SettingsStore);
         var pluginHostService = new PluginHostService(SettingsStore);
         await pluginHostService.LoadAsync();
         await SettingsStore.SaveAsync(SettingsStore.Current);
@@ -51,7 +50,6 @@ public partial class App : System.Windows.Application
         var searchService = new SearchService(
         [
             new ApplicationSearchProvider(appIndexService),
-            new FileSearchProvider(fileIndexService),
             new CustomCommandSearchProvider(SettingsStore),
             new PluginSearchProvider(pluginHostService),
         ], SettingsStore, _localizationService);
@@ -64,7 +62,6 @@ public partial class App : System.Windows.Application
             _localizationService,
             themeService,
             appIndexService,
-            fileIndexService,
             pluginHostService);
 
         _trayIconService = new TrayIconService();
@@ -79,7 +76,6 @@ public partial class App : System.Windows.Application
         mainWindow.HideLauncher();
 
         _ = Task.Run(appIndexService.RefreshAsync);
-        _ = Task.Run(fileIndexService.RefreshAsync);
     }
 
     protected override void OnExit(ExitEventArgs e)

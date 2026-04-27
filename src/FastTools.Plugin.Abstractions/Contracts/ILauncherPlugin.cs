@@ -8,6 +8,8 @@ public interface ILauncherPlugin
 
     string Description { get; }
 
+    PluginConfiguration GetConfiguration();
+
     Task<IReadOnlyList<PluginSearchItem>> QueryAsync(PluginQuery query, CancellationToken cancellationToken);
 
     Task ExecuteAsync(PluginExecutionRequest request, CancellationToken cancellationToken);

@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/plugins/">
+    <Project Path="plugins/FastTools.Plugin.FolderIndex/FastTools.Plugin.FolderIndex.csproj" />
+    <Project Path="plugins/FastTools.Plugin.Everything/FastTools.Plugin.Everything.csproj" />
     <Project Path="plugins/FastTools.Plugin.SystemCommands/FastTools.Plugin.SystemCommands.csproj" />
     <Project Path="plugins/FastTools.Plugin.WebSearch/FastTools.Plugin.WebSearch.csproj" />
   </Folder>

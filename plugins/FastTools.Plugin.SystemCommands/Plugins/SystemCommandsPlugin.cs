@@ -23,6 +23,11 @@ public sealed class SystemCommandsPlugin : ILauncherPlugin
 
     public string Description => "提供锁屏、任务管理器、控制面板、关机等系统动作。";
 
+    public PluginConfiguration GetConfiguration()
+    {
+        return PluginConfiguration.Empty;
+    }
+
     public Task<IReadOnlyList<PluginSearchItem>> QueryAsync(PluginQuery query, CancellationToken cancellationToken)
     {
         var results = Commands

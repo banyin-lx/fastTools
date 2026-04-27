@@ -1,11 +1,19 @@
 using FastTools.App.Models;
 using FastTools.Plugin.Abstractions.Contracts;
 using System.Runtime.Loader;
+using System.Text.Json;
 
 namespace FastTools.App.Services;
 
 public sealed class PluginHostService
 {
+    private const string WebPluginId = "fasttools.web";
+    private const string FolderIndexPluginId = "fasttools.folderindex";
+    private const string EverythingPluginId = "fasttools.everything";
+    private const string WebDefaultEngineSettingKey = "default_engine";
+    private const string FolderIndexDirectoriesSettingKey = "index_directories_json";
+    private const string EverythingDirectoriesSettingKey = "scope_directories_json";
+
     private readonly LauncherSettingsStore _settingsStore;
     private readonly string _pluginDirectory;
     private readonly List<LoadedPlugin> _plugins = [];
@@ -80,17 +88,20 @@ public sealed class PluginHostService
 
     private bool IsEnabled(LoadedPlugin plugin)
     {
-        return _settingsStore.Current.PluginStates
-            .FirstOrDefault(state => state.PluginId.Equals(plugin.Instance.Id, StringComparison.OrdinalIgnoreCase))
-            ?.IsEnabled ?? true;
+        return GetPluginState(plugin.Instance)?.IsEnabled ?? true;
     }
 
-    private IReadOnlyDictionary<string, string> BuildPluginSettings()
+    private IReadOnlyDictionary<string, string> BuildPluginSettings(LoadedPlugin plugin)
     {
-        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        var state = GetPluginState(plugin.Instance);
+        if (state?.Settings is null)
         {
-            ["DefaultSearchEngine"] = _settingsStore.Current.DefaultSearchEngine,
-        };
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return state.Settings
+            .Where(pair => !string.IsNullOrWhiteSpace(pair.Key))
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
     }
 
     private async Task<IReadOnlyList<SearchResultItem>> SearchPluginAsync(
@@ -101,7 +112,7 @@ public sealed class PluginHostService
         try
         {
             var items = await plugin.Instance.QueryAsync(
-                new PluginQuery(query, BuildPluginSettings()),
+                new PluginQuery(query, BuildPluginSettings(plugin)),
                 cancellationToken).ConfigureAwait(false);
 
             return items.Select(item => new SearchResultItem
@@ -115,7 +126,7 @@ public sealed class PluginHostService
                 RequiresConfirmation = item.RequiresConfirmation,
                 ConfirmationMessage = item.ConfirmationMessage,
                 ExecuteAsync = ct => plugin.Instance.ExecuteAsync(
-                    new PluginExecutionRequest(item, BuildPluginSettings()),
+                    new PluginExecutionRequest(item, BuildPluginSettings(plugin)),
                     ct),
             }).ToList();
         }
@@ -127,22 +138,83 @@ public sealed class PluginHostService
 
     private void UpsertPluginState(ILauncherPlugin plugin)
     {
-        var state = _settingsStore.Current.PluginStates
-            .FirstOrDefault(existing => existing.PluginId.Equals(plugin.Id, StringComparison.OrdinalIgnoreCase));
-
-        if (state is not null)
+        var state = GetPluginState(plugin);
+        if (state is null)
         {
-            state.DisplayName = plugin.DisplayName;
-            state.Description = plugin.Description;
-            return;
+            state = new PluginState
+            {
+                PluginId = plugin.Id,
+                DisplayName = plugin.DisplayName,
+                Description = plugin.Description,
+                IsEnabled = true,
+                Settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+            };
+            _settingsStore.Current.PluginStates.Add(state);
         }
 
-        _settingsStore.Current.PluginStates.Add(new PluginState
+        state.DisplayName = plugin.DisplayName;
+        state.Description = plugin.Description;
+        state.Settings ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        var configuration = plugin.GetConfiguration();
+        foreach (var setting in configuration.Settings)
         {
-            PluginId = plugin.Id,
-            DisplayName = plugin.DisplayName,
-            Description = plugin.Description,
-            IsEnabled = true,
-        });
+            if (state.Settings.ContainsKey(setting.Key))
+            {
+                continue;
+            }
+
+            state.Settings[setting.Key] = ResolveDefaultValue(plugin.Id, setting);
+        }
+    }
+
+    private PluginState? GetPluginState(ILauncherPlugin plugin)
+    {
+        return _settingsStore.Current.PluginStates
+            .FirstOrDefault(state => state.PluginId.Equals(plugin.Id, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string ResolveDefaultValue(string pluginId, PluginSettingDefinition setting)
+    {
+        if (TryReadLegacyValue(pluginId, setting.Key, out var legacyValue))
+        {
+            return legacyValue;
+        }
+
+        return setting switch
+        {
+            PluginSelectSettingDefinition select => select.DefaultValue,
+            PluginDirectoryListSettingDefinition => "[]",
+            _ => string.Empty,
+        };
+    }
+
+    private bool TryReadLegacyValue(string pluginId, string settingKey, out string value)
+    {
+        if (pluginId.Equals(WebPluginId, StringComparison.OrdinalIgnoreCase) &&
+            settingKey.Equals(WebDefaultEngineSettingKey, StringComparison.OrdinalIgnoreCase))
+        {
+            value = _settingsStore.Current.DefaultSearchEngine;
+            return !string.IsNullOrWhiteSpace(value);
+        }
+
+        if (pluginId.Equals(FolderIndexPluginId, StringComparison.OrdinalIgnoreCase) &&
+            settingKey.Equals(FolderIndexDirectoriesSettingKey, StringComparison.OrdinalIgnoreCase) &&
+            _settingsStore.Current.IndexedDirectories is { Count: > 0 })
+        {
+            value = JsonSerializer.Serialize(_settingsStore.Current.IndexedDirectories);
+            return true;
+        }
+
+        if (pluginId.Equals(EverythingPluginId, StringComparison.OrdinalIgnoreCase) &&
+            settingKey.Equals(EverythingDirectoriesSettingKey, StringComparison.OrdinalIgnoreCase) &&
+            _settingsStore.Current.EverythingIndexedDirectories is { Count: > 0 })
+        {
+            value = JsonSerializer.Serialize(_settingsStore.Current.EverythingIndexedDirectories);
+            return true;
+        }
+
+        value = string.Empty;
+        return false;
     }
 }

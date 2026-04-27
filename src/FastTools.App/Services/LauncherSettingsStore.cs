@@ -41,6 +41,7 @@ public sealed class LauncherSettingsStore
             await using var stream = File.OpenRead(_settingsPath);
             var settings = await JsonSerializer.DeserializeAsync<LauncherSettings>(stream, SerializerOptions).ConfigureAwait(false)
                 ?? LauncherSettings.CreateDefault();
+            settings.EnsureDefaults();
             Current = settings;
             return Current.Clone();
         }

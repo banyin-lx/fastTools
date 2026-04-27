@@ -27,6 +27,7 @@ public sealed class SearchService
         var normalizedQuery = query.Trim();
         var results = batches
             .SelectMany(batch => batch)
+            .Where(item => _settingsStore.Current.IsGroupEnabled(item.Group))
             .GroupBy(result => result.Key, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.OrderByDescending(item => item.Score).First())
             .Select(BoostByUsage)

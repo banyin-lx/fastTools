@@ -4,7 +4,8 @@
         Title="FastTools Tray Menu"
         AllowsTransparency="True"
         Background="Transparent"
-        FontFamily="Segoe UI Variable Text"
+        FontFamily="Microsoft YaHei UI"
+        FontSize="14"
         ResizeMode="NoResize"
         ShowActivated="True"
         ShowInTaskbar="False"
@@ -64,10 +65,9 @@
                 </Border>
                 <TextBlock Margin="8,0,0,0"
                            VerticalAlignment="Center"
-                           FontSize="14"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               Text="FastTools" />
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           Text="FastTools" />
             </DockPanel>
 
             <Button Click="OpenButton_Click"
@@ -85,7 +85,6 @@
                     <TextBlock Grid.Column="1"
                                Margin="8,0,0,0"
                                VerticalAlignment="Center"
-                               FontSize="13"
                                Text="{Binding [Tray.Open]}" />
                 </Grid>
             </Button>
@@ -105,7 +104,6 @@
                     <TextBlock Grid.Column="1"
                                Margin="8,0,0,0"
                                VerticalAlignment="Center"
-                               FontSize="13"
                                Text="{Binding [Tray.Settings]}" />
                 </Grid>
             </Button>
@@ -125,7 +123,6 @@
                     <TextBlock Grid.Column="1"
                                Margin="8,0,0,0"
                                VerticalAlignment="Center"
-                               FontSize="13"
                                Text="{Binding [Tray.Refresh]}" />
                 </Grid>
             </Button>
@@ -149,7 +146,6 @@
                     <TextBlock Grid.Column="1"
                                Margin="8,0,0,0"
                                VerticalAlignment="Center"
-                               FontSize="13"
                                Text="{Binding [Tray.Exit]}" />
                 </Grid>
             </Button>
