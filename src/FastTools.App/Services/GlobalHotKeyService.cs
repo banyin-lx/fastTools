@@ -21,7 +21,7 @@ public sealed class GlobalHotKeyService : IDisposable
 
         if (!HotKeyGesture.TryParse(gestureText, out var gesture) || gesture is null)
         {
-            errorMessage = "快捷键格式无效，请使用如 Alt+Space 的格式。";
+            errorMessage = "HotKey.Error.InvalidFormat";
             return false;
         }
 
@@ -32,7 +32,7 @@ public sealed class GlobalHotKeyService : IDisposable
             return true;
         }
 
-        errorMessage = "全局快捷键注册失败，可能已被其他程序占用。";
+        errorMessage = "HotKey.Error.RegistrationFailed";
         return false;
     }
 

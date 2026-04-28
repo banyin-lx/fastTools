@@ -23,6 +23,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly ThemeService _themeService;
     private readonly ApplicationIndexService _applicationIndexService;
     private readonly PluginHostService _pluginHostService;
+    private double _lastWindowLeft;
+    private double _lastWindowTop;
 
     private TrayIconService? _trayIconService;
     private CancellationTokenSource? _searchCancellationTokenSource;
@@ -138,6 +140,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public void HideLauncher()
     {
+        // Save current position for RememberLast mode
+        if (_settingsStore.Current.WindowPositionMode == SearchWindowPositionMode.RememberLast)
+        {
+            _lastWindowLeft = Left;
+            _lastWindowTop = Top;
+        }
+
         ResetTransientState();
 
         if (!_isHotKeyRegistered)
@@ -169,21 +178,33 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         EnsureNativeInteropInitialized();
 
         var handle = new WindowInteropHelper(this).Handle;
-        if (_hotKeyService.Register(handle, _settingsStore.Current.HotKey, out var errorMessage))
+        var gesture = _settingsStore.Current.HotKey;
+        if (_hotKeyService.Register(handle, gesture, out var errorMessage))
         {
             _isHotKeyRegistered = true;
             ShowInTaskbar = false;
+            FastTools.App.Services.LogService.Instance.InfoKey(
+                "HotKey",
+                "Log.HotKey.Registered",
+                gesture);
             return true;
         }
 
         _isHotKeyRegistered = false;
         ShowInTaskbar = false;
+        var localizedError = string.IsNullOrEmpty(errorMessage)
+            ? string.Empty
+            : _localizer.Get(errorMessage);
+        FastTools.App.Services.LogService.Instance.ErrorKey(
+            "HotKey",
+            "Log.HotKey.RegisterFailed",
+            gesture, localizedError);
 
         if (showErrorDialog)
         {
             _trayIconService?.ShowBalloonTip(
                 _localizer.Get("Main.HotKeyError.Title"),
-                $"{errorMessage} {_localizer.Get("Main.HotKeyError.Body")}",
+                $"{localizedError} {_localizer.Get("Main.HotKeyError.Body")}",
                 System.Windows.Forms.ToolTipIcon.Warning);
         }
 
@@ -304,8 +325,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         try
         {
-            await Task.Delay(120, cancellationToken);
+            if (_settingsStore.Current.SearchDebounceEnabled)
+            {
+                await Task.Delay(_settingsStore.Current.SearchDebounceMilliseconds, cancellationToken);
+            }
+
+            FastTools.App.Services.LogService.Instance.DebugKey("Search", "Log.Search.Query", normalizedQuery);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             var results = await _searchService.SearchAsync(normalizedQuery, cancellationToken);
+            sw.Stop();
             if (cancellationToken.IsCancellationRequested || currentSearchVersion != _searchVersion)
             {
                 return;
@@ -323,12 +351,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(ResultsListVisibility));
             OnPropertyChanged(nameof(EmptyStateVisibility));
             UpdateWindowPresentation();
+            FastTools.App.Services.LogService.Instance.InfoKey("Search", "Log.Search.Result", normalizedQuery, results.Count, sw.ElapsedMilliseconds);
         }
         catch (OperationCanceledException)
         {
         }
         catch (Exception exception)
         {
+            FastTools.App.Services.LogService.Instance.ErrorKey("Search", "Log.Search.Failed", normalizedQuery, exception.Message);
             if (currentSearchVersion != _searchVersion)
             {
                 return;
@@ -449,6 +479,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
 
             await _settingsStore.SaveAsync(settingsWindow.SavedSettings);
+            // Reset cached position so new horizontal/vertical settings take effect on next show
+            _lastWindowLeft = 0;
+            _lastWindowTop = 0;
             _localizer.Apply(_settingsStore.Current.Language);
             _trayIconService?.ApplyLocalization(_localizer);
             _themeService.Apply(_settingsStore.Current.ThemeMode);
@@ -550,12 +583,54 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void PositionLauncher()
     {
+        var settings = _settingsStore.Current;
         var workArea = SystemParameters.WorkArea;
         var width = Width;
         var height = ActualHeight > 0 ? ActualHeight : 96;
 
-        Left = workArea.Left + (workArea.Width - width) / 2d;
-        Top = workArea.Top + Math.Max(48d, (workArea.Height - height) / 4.2d);
+        if (settings.WindowPositionMode == SearchWindowPositionMode.FollowMouse)
+        {
+            var cursorPos = System.Windows.Forms.Cursor.Position;
+            var screen = System.Windows.Forms.Screen.FromPoint(cursorPos);
+            var monitorArea = new System.Windows.Rect(
+                screen.WorkingArea.X, screen.WorkingArea.Y,
+                screen.WorkingArea.Width, screen.WorkingArea.Height);
+
+            Left = settings.HorizontalPosition switch
+            {
+                SearchBarHorizontalPosition.Left => monitorArea.Left,
+                SearchBarHorizontalPosition.Right => monitorArea.Left + monitorArea.Width - width,
+                _ => monitorArea.Left + (monitorArea.Width - width) / 2d,
+            };
+            Top = settings.VerticalPosition switch
+            {
+                SearchBarVerticalPosition.Middle => monitorArea.Top + (monitorArea.Height - height) / 2d,
+                _ => monitorArea.Top + Math.Max(48d, (monitorArea.Height - height) / 4.2d),
+            };
+            return;
+        }
+
+        if (settings.WindowPositionMode == SearchWindowPositionMode.RememberLast &&
+            (_lastWindowLeft != 0 || _lastWindowTop != 0))
+        {
+            Left = _lastWindowLeft;
+            Top = _lastWindowTop;
+            return;
+        }
+
+        // PrimaryMonitor or first launch: position based on Horizontal/Vertical settings
+        Left = settings.HorizontalPosition switch
+        {
+            SearchBarHorizontalPosition.Left => workArea.Left,
+            SearchBarHorizontalPosition.Right => workArea.Left + workArea.Width - width,
+            _ => workArea.Left + (workArea.Width - width) / 2d,
+        };
+
+        Top = settings.VerticalPosition switch
+        {
+            SearchBarVerticalPosition.Middle => workArea.Top + (workArea.Height - height) / 2d,
+            _ => workArea.Top + Math.Max(48d, (workArea.Height - height) / 4.2d),
+        };
     }
 
     private void ChromeBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

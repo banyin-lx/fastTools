@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "FastTools.App": {
+      "commandName": "Project",
+      "hotReloadEnabled": false
+    }
+  }
+}

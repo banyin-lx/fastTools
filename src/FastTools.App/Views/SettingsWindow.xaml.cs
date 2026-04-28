@@ -1,3 +1,4 @@
+using FastTools.App.Infrastructure;
 using FastTools.App.Models;
 using FastTools.App.Services;
 using FastTools.Plugin.Abstractions.Contracts;
@@ -26,6 +27,15 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     private string _hotKeyText = "Alt+Space";
     private AppThemeMode _selectedTheme;
     private string _selectedLanguage = LocalizationService.DefaultLanguageCode;
+    private SearchBarHorizontalPosition _selectedHorizontalPosition;
+    private SearchBarVerticalPosition _selectedVerticalPosition;
+    private SearchWindowPositionMode _selectedWindowPositionMode;
+    private bool _isPositionExpanded = true;
+    private bool _hideShortcutResults;
+    private bool _searchDebounceEnabled = true;
+    private string _searchDebounceMillisecondsText = LauncherSettings.DefaultSearchDebounceMilliseconds.ToString();
+    private bool _loggingEnabled = true;
+    private LogLevel _selectedLogLevel = LogLevel.Info;
 
     public SettingsWindow(
         LauncherSettings settings,
@@ -58,6 +68,26 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
             })
             .ToList();
 
+        SearchBarHorizontalOptions =
+        [
+            new OptionItem<SearchBarHorizontalPosition> { Value = SearchBarHorizontalPosition.Left, Label = _localizer.Get("SearchBarPosition.Horizontal.Left") },
+            new OptionItem<SearchBarHorizontalPosition> { Value = SearchBarHorizontalPosition.Center, Label = _localizer.Get("SearchBarPosition.Horizontal.Center") },
+            new OptionItem<SearchBarHorizontalPosition> { Value = SearchBarHorizontalPosition.Right, Label = _localizer.Get("SearchBarPosition.Horizontal.Right") },
+        ];
+
+        SearchBarVerticalOptions =
+        [
+            new OptionItem<SearchBarVerticalPosition> { Value = SearchBarVerticalPosition.Top, Label = _localizer.Get("SearchBarPosition.Vertical.Top") },
+            new OptionItem<SearchBarVerticalPosition> { Value = SearchBarVerticalPosition.Middle, Label = _localizer.Get("SearchBarPosition.Vertical.Middle") },
+        ];
+
+        SearchWindowPositionOptions =
+        [
+            new OptionItem<SearchWindowPositionMode> { Value = SearchWindowPositionMode.RememberLast, Label = _localizer.Get("WindowPosition.RememberLast") },
+            new OptionItem<SearchWindowPositionMode> { Value = SearchWindowPositionMode.FollowMouse, Label = _localizer.Get("WindowPosition.FollowMouse") },
+            new OptionItem<SearchWindowPositionMode> { Value = SearchWindowPositionMode.PrimaryMonitor, Label = _localizer.Get("WindowPosition.PrimaryMonitor") },
+        ];
+
         Sections =
         [
             new SettingsSectionItem(SettingsSection.General, "\uE713", _localizer.Get("Settings.General.Title"), _localizer.Get("Settings.General.Description")),
@@ -65,6 +95,8 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
             new SettingsSectionItem(SettingsSection.Commands, "\uE756", _localizer.Get("Settings.CustomCommands.Title"), _localizer.Get("Settings.CustomCommands.Description")),
             new SettingsSectionItem(SettingsSection.Priority, "\uE8D1", _localizer.Get("Settings.Priority.Title"), _localizer.Get("Settings.Priority.Description")),
             new SettingsSectionItem(SettingsSection.Plugins, "\uE943", _localizer.Get("Settings.Plugins.Title"), _localizer.Get("Settings.Plugins.Description")),
+            new SettingsSectionItem(SettingsSection.Logs, "\uE9F9", _localizer.Get("Settings.Logs.Title"), _localizer.Get("Settings.Logs.Description")),
+            new SettingsSectionItem(SettingsSection.About, "\uE946", _localizer.Get("Settings.About.Title"), _localizer.Get("Settings.About.Description")),
         ];
 
         CustomCommands = new ObservableCollection<CustomCommandDefinition>(settings.CustomCommands);
@@ -92,8 +124,25 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         HotKeyText = settings.HotKey;
         SelectedTheme = settings.ThemeMode;
         SelectedLanguage = settings.Language;
-        SelectedSection = Sections[0];
+        SelectedHorizontalPosition = settings.HorizontalPosition;
+        SelectedVerticalPosition = settings.VerticalPosition;
+        SelectedWindowPositionMode = settings.WindowPositionMode;
+        HideShortcutResults = settings.HideShortcutResults;
+        SearchDebounceEnabled = settings.SearchDebounceEnabled;
+        SearchDebounceMillisecondsText = settings.SearchDebounceMilliseconds.ToString();
+        LoggingEnabled = settings.LoggingEnabled;
+        SelectedLogLevel = settings.MinLogLevel;
 
+        LogLevelOptions =
+        [
+            new OptionItem<LogLevel> { Value = LogLevel.Trace, Label = "Trace" },
+            new OptionItem<LogLevel> { Value = LogLevel.Debug, Label = "Debug" },
+            new OptionItem<LogLevel> { Value = LogLevel.Info, Label = "Info" },
+            new OptionItem<LogLevel> { Value = LogLevel.Warn, Label = "Warn" },
+            new OptionItem<LogLevel> { Value = LogLevel.Error, Label = "Error" },
+        ];
+
+        SelectedSection = Sections[0];
         InitializeComponent();
         DataContext = this;
         ApplyLocalizedColumnHeaders();
@@ -110,6 +159,27 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     public IReadOnlyList<OptionItem<AppThemeMode>> ThemeOptions { get; }
 
     public IReadOnlyList<OptionItem<string>> LanguageOptions { get; }
+
+    public IReadOnlyList<OptionItem<SearchBarHorizontalPosition>> SearchBarHorizontalOptions { get; }
+
+    public IReadOnlyList<OptionItem<SearchBarVerticalPosition>> SearchBarVerticalOptions { get; }
+
+    public IReadOnlyList<OptionItem<SearchWindowPositionMode>> SearchWindowPositionOptions { get; }
+
+    public bool IsPositionExpanded
+    {
+        get => _isPositionExpanded;
+        set
+        {
+            if (_isPositionExpanded == value)
+            {
+                return;
+            }
+
+            _isPositionExpanded = value;
+            OnPropertyChanged();
+        }
+    }
 
     public ObservableCollection<CustomCommandDefinition> CustomCommands { get; }
 
@@ -167,6 +237,142 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         }
     }
 
+    public bool HideShortcutResults
+    {
+        get => _hideShortcutResults;
+        set
+        {
+            if (_hideShortcutResults == value)
+            {
+                return;
+            }
+
+            _hideShortcutResults = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool SearchDebounceEnabled
+    {
+        get => _searchDebounceEnabled;
+        set
+        {
+            if (_searchDebounceEnabled == value)
+            {
+                return;
+            }
+
+            _searchDebounceEnabled = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SearchDebounceSettingsVisibility));
+        }
+    }
+
+    public string SearchDebounceMillisecondsText
+    {
+        get => _searchDebounceMillisecondsText;
+        set
+        {
+            if (string.Equals(_searchDebounceMillisecondsText, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _searchDebounceMillisecondsText = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public Visibility SearchDebounceSettingsVisibility => SearchDebounceEnabled ? Visibility.Visible : Visibility.Collapsed;
+
+    public bool LoggingEnabled
+    {
+        get => _loggingEnabled;
+        set
+        {
+            if (_loggingEnabled == value)
+            {
+                return;
+            }
+
+            _loggingEnabled = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public IReadOnlyList<OptionItem<LogLevel>> LogLevelOptions { get; }
+
+    public LogLevel SelectedLogLevel
+    {
+        get => _selectedLogLevel;
+        set
+        {
+            if (_selectedLogLevel == value)
+            {
+                return;
+            }
+
+            _selectedLogLevel = value;
+            LogService.Instance.MinLevel = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public ObservableCollection<LogEntry> LogEntries => LogService.Instance.Entries;
+
+    public string AppDisplayName => "FastTools";
+
+    public string AppVersion => AppInfo.Version;
+
+    public string AppCopyright => AppInfo.Copyright;
+
+    public string AppGitHubUrl => AppInfo.GitHubUrl;
+
+    public SearchBarHorizontalPosition SelectedHorizontalPosition
+    {
+        get => _selectedHorizontalPosition;
+        set
+        {
+            if (_selectedHorizontalPosition == value)
+            {
+                return;
+            }
+
+            _selectedHorizontalPosition = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public SearchBarVerticalPosition SelectedVerticalPosition
+    {
+        get => _selectedVerticalPosition;
+        set
+        {
+            if (_selectedVerticalPosition == value)
+            {
+                return;
+            }
+
+            _selectedVerticalPosition = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public SearchWindowPositionMode SelectedWindowPositionMode
+    {
+        get => _selectedWindowPositionMode;
+        set
+        {
+            if (_selectedWindowPositionMode == value)
+            {
+                return;
+            }
+
+            _selectedWindowPositionMode = value;
+            OnPropertyChanged();
+        }
+    }
+
     public string SelectedSectionTitle => SelectedSection?.Title ?? string.Empty;
 
     public string SelectedSectionDescription => SelectedSection?.Description ?? string.Empty;
@@ -186,6 +392,10 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
     public Visibility PluginsSectionVisibility => GetSectionVisibility(SettingsSection.Plugins);
 
+    public Visibility LogsSectionVisibility => GetSectionVisibility(SettingsSection.Logs);
+
+    public Visibility AboutSectionVisibility => GetSectionVisibility(SettingsSection.About);
+
     public SettingsSectionItem? SelectedSection
     {
         get => _selectedSection;
@@ -198,6 +408,10 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
             _selectedSection = value;
             OnPropertyChanged();
+            if (value?.Section == SettingsSection.Logs)
+            {
+                ScheduleScrollLogsToBottom();
+            }
             OnPropertyChanged(nameof(SelectedSectionTitle));
             OnPropertyChanged(nameof(SelectedSectionDescription));
             OnPropertyChanged(nameof(SelectedSectionHeaderVisibility));
@@ -206,6 +420,8 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(CommandsSectionVisibility));
             OnPropertyChanged(nameof(PrioritySectionVisibility));
             OnPropertyChanged(nameof(PluginsSectionVisibility));
+            OnPropertyChanged(nameof(LogsSectionVisibility));
+            OnPropertyChanged(nameof(AboutSectionVisibility));
         }
     }
 
@@ -242,6 +458,129 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     private void SettingsWindow_Loaded(object sender, RoutedEventArgs e)
     {
         CenterOnWorkArea();
+        RebuildLogDocument();
+        LogService.Instance.Entries.CollectionChanged += LogEntries_CollectionChanged;
+        Closed += (_, _) => LogService.Instance.Entries.CollectionChanged -= LogEntries_CollectionChanged;
+        ScheduleScrollLogsToBottom();
+    }
+
+    private void LogEntries_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        if (LogTextBox is null)
+        {
+            return;
+        }
+
+        switch (e.Action)
+        {
+            case System.Collections.Specialized.NotifyCollectionChangedAction.Add:
+                if (e.NewItems is not null)
+                {
+                    foreach (var item in e.NewItems)
+                    {
+                        if (item is LogEntry entry)
+                        {
+                            AppendLogParagraph(entry);
+                        }
+                    }
+                }
+                ScheduleScrollLogsToBottom();
+                break;
+
+            case System.Collections.Specialized.NotifyCollectionChangedAction.Remove:
+                if (LogTextBox.Document.Blocks.FirstBlock is { } first)
+                {
+                    LogTextBox.Document.Blocks.Remove(first);
+                }
+                break;
+
+            case System.Collections.Specialized.NotifyCollectionChangedAction.Reset:
+                LogTextBox.Document.Blocks.Clear();
+                break;
+        }
+    }
+
+    private void RebuildLogDocument()
+    {
+        if (LogTextBox is null)
+        {
+            return;
+        }
+
+        LogTextBox.Document.Blocks.Clear();
+        foreach (var entry in LogService.Instance.Entries)
+        {
+            AppendLogParagraph(entry);
+        }
+    }
+
+    private void AppendLogParagraph(LogEntry entry)
+    {
+        var paragraph = new Paragraph
+        {
+            Margin = new Thickness(0, 1, 0, 1),
+            LineHeight = double.NaN,
+        };
+
+        foreach (var run in ParseMarkup(entry.Markup))
+        {
+            paragraph.Inlines.Add(run);
+        }
+
+        LogTextBox!.Document.Blocks.Add(paragraph);
+    }
+
+    private static IEnumerable<Run> ParseMarkup(string markup)
+    {
+        // Tokens: [#RGB] or [#RRGGBB] or [#AARRGGBB] ... [/]
+        var matches = System.Text.RegularExpressions.Regex.Matches(
+            markup, @"\[#(?<hex>[0-9A-Fa-f]{3,8})\](?<text>.*?)\[/\]",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        var cursor = 0;
+        foreach (System.Text.RegularExpressions.Match m in matches)
+        {
+            if (m.Index > cursor)
+            {
+                yield return new Run(markup.Substring(cursor, m.Index - cursor));
+            }
+
+            var hex = "#" + m.Groups["hex"].Value;
+            var text = m.Groups["text"].Value;
+            var run = new Run(text) { FontWeight = FontWeights.SemiBold };
+            try
+            {
+                var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex)!;
+                run.Foreground = new SolidColorBrush(color);
+            }
+            catch
+            {
+                // ignore invalid color, keep default foreground
+            }
+            yield return run;
+
+            cursor = m.Index + m.Length;
+        }
+
+        if (cursor < markup.Length)
+        {
+            yield return new Run(markup.Substring(cursor));
+        }
+    }
+
+    private void ScheduleScrollLogsToBottom()
+    {
+        Dispatcher.BeginInvoke(
+            () =>
+            {
+                if (LogTextBox is null)
+                {
+                    return;
+                }
+                LogTextBox.UpdateLayout();
+                LogTextBox.ScrollToEnd();
+            },
+            System.Windows.Threading.DispatcherPriority.ContextIdle);
     }
 
     protected override void OnClosed(EventArgs e)
@@ -518,6 +857,25 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         return (source as System.Windows.Controls.ListBoxItem)?.DataContext as SearchGroupPriorityItem;
     }
 
+    private void SearchDebounceMillisecondsTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+    {
+        e.Handled = string.IsNullOrEmpty(e.Text) || e.Text.Any(character => !char.IsDigit(character));
+    }
+
+    private void SearchDebounceMillisecondsTextBox_Pasting(object sender, DataObjectPastingEventArgs e)
+    {
+        if (!e.DataObject.GetDataPresent(System.Windows.DataFormats.Text))
+        {
+            e.CancelCommand();
+            return;
+        }
+
+        if (e.DataObject.GetData(System.Windows.DataFormats.Text) is not string text || text.Any(character => !char.IsDigit(character)))
+        {
+            e.CancelCommand();
+        }
+    }
+
     private void RenumberSearchGroupPriorities()
     {
         for (var i = 0; i < SearchGroupPriorities.Count; i++)
@@ -543,10 +901,33 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
             return;
         }
 
+        if (SearchDebounceEnabled &&
+            (!int.TryParse(SearchDebounceMillisecondsText, out var searchDebounceMilliseconds) || searchDebounceMilliseconds < 0))
+        {
+            System.Windows.MessageBox.Show(
+                _localizer.Get("Settings.InvalidSearchDebounceMilliseconds"),
+                _localizer.Get("Settings.Title"),
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Warning);
+            return;
+        }
+
+        var validatedSearchDebounceMilliseconds = int.TryParse(SearchDebounceMillisecondsText, out var parsedSearchDebounceMilliseconds) && parsedSearchDebounceMilliseconds >= 0
+            ? parsedSearchDebounceMilliseconds
+            : LauncherSettings.DefaultSearchDebounceMilliseconds;
+
         SavedSettings = _baseSettings.Clone();
         SavedSettings.HotKey = HotKeyText;
         SavedSettings.ThemeMode = SelectedTheme;
         SavedSettings.Language = SelectedLanguage;
+        SavedSettings.HorizontalPosition = SelectedHorizontalPosition;
+        SavedSettings.VerticalPosition = SelectedVerticalPosition;
+        SavedSettings.WindowPositionMode = SelectedWindowPositionMode;
+        SavedSettings.HideShortcutResults = HideShortcutResults;
+        SavedSettings.SearchDebounceEnabled = SearchDebounceEnabled;
+        SavedSettings.SearchDebounceMilliseconds = validatedSearchDebounceMilliseconds;
+        SavedSettings.LoggingEnabled = LoggingEnabled;
+        SavedSettings.MinLogLevel = SelectedLogLevel;
         SavedSettings.CustomCommands = CustomCommands
             .Where(command => !string.IsNullOrWhiteSpace(command.Name) &&
                               !string.IsNullOrWhiteSpace(command.Command))
@@ -596,6 +977,69 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         return SelectedSection?.Section == section ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private void ClearLogs_Click(object sender, RoutedEventArgs e)
+    {
+        LogService.Instance.Clear();
+    }
+
+    private void LogBox_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs e)
+    {
+        // Prevent the outer settings ScrollViewer from scrolling when clicking inside the log box,
+        // which would push the level dropdown off-screen.
+        e.Handled = true;
+    }
+
+    private void CopyAllLogs_Click(object sender, RoutedEventArgs e)
+    {
+        var snapshot = LogService.Instance.Entries.ToArray();
+        if (snapshot.Length == 0)
+        {
+            return;
+        }
+
+        var sb = new System.Text.StringBuilder();
+        foreach (var entry in snapshot)
+        {
+            sb.Append(entry.FormattedTimestamp)
+              .Append(' ')
+              .Append(entry.LevelText)
+              .Append(" [")
+              .Append(entry.Source)
+              .Append("] ")
+              .AppendLine(entry.Message);
+        }
+
+        TryCopyToClipboard(sb.ToString());
+    }
+
+    private static void TryCopyToClipboard(string text)
+    {
+        try
+        {
+            System.Windows.Clipboard.SetText(text);
+        }
+        catch (Exception ex)
+        {
+            LogService.Instance.WarnKey("Settings", "Log.Settings.CopyLogsFailed", ex.Message);
+        }
+    }
+
+    private void OpenGitHub_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = AppInfo.GitHubUrl,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            LogService.Instance.WarnKey("Settings", "Log.Settings.OpenGitHubFailed", ex.Message);
+        }
+    }
+
     private void CenterOnWorkArea()
     {
         var workArea = SystemParameters.WorkArea;
@@ -615,6 +1059,8 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Sections.Add(new SettingsSectionItem(SettingsSection.Commands, "\uE756", _localizer.Get("Settings.CustomCommands.Title"), _localizer.Get("Settings.CustomCommands.Description")));
         Sections.Add(new SettingsSectionItem(SettingsSection.Priority, "\uE8D1", _localizer.Get("Settings.Priority.Title"), _localizer.Get("Settings.Priority.Description")));
         Sections.Add(new SettingsSectionItem(SettingsSection.Plugins, "\uE943", _localizer.Get("Settings.Plugins.Title"), _localizer.Get("Settings.Plugins.Description")));
+        Sections.Add(new SettingsSectionItem(SettingsSection.Logs, "\uE9F9", _localizer.Get("Settings.Logs.Title"), _localizer.Get("Settings.Logs.Description")));
+        Sections.Add(new SettingsSectionItem(SettingsSection.About, "\uE946", _localizer.Get("Settings.About.Title"), _localizer.Get("Settings.About.Description")));
         SelectedSection = Sections.FirstOrDefault(s => s.Section == currentSection) ?? Sections[0];
 
         foreach (var option in ThemeOptions)
@@ -630,6 +1076,38 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
             };
         }
 
+        foreach (var option in SearchBarHorizontalOptions)
+        {
+            option.Label = option.Value switch
+            {
+                SearchBarHorizontalPosition.Left => _localizer.Get("SearchBarPosition.Horizontal.Left"),
+                SearchBarHorizontalPosition.Center => _localizer.Get("SearchBarPosition.Horizontal.Center"),
+                SearchBarHorizontalPosition.Right => _localizer.Get("SearchBarPosition.Horizontal.Right"),
+                _ => option.Label,
+            };
+        }
+
+        foreach (var option in SearchBarVerticalOptions)
+        {
+            option.Label = option.Value switch
+            {
+                SearchBarVerticalPosition.Top => _localizer.Get("SearchBarPosition.Vertical.Top"),
+                SearchBarVerticalPosition.Middle => _localizer.Get("SearchBarPosition.Vertical.Middle"),
+                _ => option.Label,
+            };
+        }
+
+        foreach (var option in SearchWindowPositionOptions)
+        {
+            option.Label = option.Value switch
+            {
+                SearchWindowPositionMode.RememberLast => _localizer.Get("WindowPosition.RememberLast"),
+                SearchWindowPositionMode.FollowMouse => _localizer.Get("WindowPosition.FollowMouse"),
+                SearchWindowPositionMode.PrimaryMonitor => _localizer.Get("WindowPosition.PrimaryMonitor"),
+                _ => option.Label,
+            };
+        }
+
         foreach (var item in SearchGroupPriorities)
         {
             item.DisplayGroup = _localizer.Get($"Group.{item.Group}");
@@ -640,11 +1118,30 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
     private void ApplyLocalizedColumnHeaders()
     {
-        CommandNameColumn.Header = _localizer.Get("Settings.Name");
-        CommandAliasColumn.Header = _localizer.Get("Settings.Alias");
-        CommandPathColumn.Header = _localizer.Get("Settings.Command");
-        CommandArgsColumn.Header = _localizer.Get("Settings.Arguments");
-        CommandConfirmColumn.Header = _localizer.Get("Settings.Confirm");
+        if (CommandNameColumn is not null)
+        {
+            CommandNameColumn.Header = _localizer.Get("Settings.Name");
+        }
+
+        if (CommandAliasColumn is not null)
+        {
+            CommandAliasColumn.Header = _localizer.Get("Settings.Alias");
+        }
+
+        if (CommandPathColumn is not null)
+        {
+            CommandPathColumn.Header = _localizer.Get("Settings.Command");
+        }
+
+        if (CommandArgsColumn is not null)
+        {
+            CommandArgsColumn.Header = _localizer.Get("Settings.Arguments");
+        }
+
+        if (CommandConfirmColumn is not null)
+        {
+            CommandConfirmColumn.Header = _localizer.Get("Settings.Confirm");
+        }
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
@@ -722,6 +1219,8 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         Commands,
         Priority,
         Plugins,
+        Logs,
+        About,
     }
 
     public sealed class PluginConfigurationItem : INotifyPropertyChanged
@@ -811,177 +1310,4 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         }
     }
 
-    public abstract class PluginSettingItem
-    {
-        protected PluginSettingItem(string key, string label, string? description)
-        {
-            Key = key;
-            Label = label;
-            Description = description ?? string.Empty;
-        }
-
-        public string Key { get; }
-
-        public string Label { get; }
-
-        public string Description { get; }
-
-        public Visibility DescriptionVisibility =>
-            string.IsNullOrWhiteSpace(Description) ? Visibility.Collapsed : Visibility.Visible;
-
-        public abstract string SerializeValue();
-
-        public static PluginSettingItem Create(
-            PluginSettingDefinition definition,
-            IReadOnlyDictionary<string, string> values)
-        {
-            values.TryGetValue(definition.Key, out var storedValue);
-            return definition switch
-            {
-                PluginSelectSettingDefinition select => PluginSelectSettingItem.From(select, storedValue),
-                PluginDirectoryListSettingDefinition directories => PluginDirectoryListSettingItem.From(directories, storedValue),
-                _ => new PluginUnknownSettingItem(definition.Key, definition.Label, definition.Description),
-            };
-        }
-    }
-
-    public sealed class PluginSelectSettingItem : PluginSettingItem, INotifyPropertyChanged
-    {
-        private string _selectedOption = string.Empty;
-
-        private PluginSelectSettingItem(
-            string key,
-            string label,
-            string? description,
-            IReadOnlyList<string> options,
-            string selectedOption)
-            : base(key, label, description)
-        {
-            Options = new ObservableCollection<string>(options);
-            _selectedOption = selectedOption;
-        }
-
-        public ObservableCollection<string> Options { get; }
-
-        public string SelectedOption
-        {
-            get => _selectedOption;
-            set
-            {
-                if (_selectedOption == value)
-                {
-                    return;
-                }
-
-                _selectedOption = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedOption)));
-            }
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        public override string SerializeValue()
-        {
-            return SelectedOption;
-        }
-
-        public static PluginSelectSettingItem From(PluginSelectSettingDefinition definition, string? storedValue)
-        {
-            var selected = definition.Options.Contains(storedValue, StringComparer.OrdinalIgnoreCase)
-                ? storedValue!
-                : definition.DefaultValue;
-
-            return new PluginSelectSettingItem(
-                definition.Key,
-                definition.Label,
-                definition.Description,
-                definition.Options,
-                selected);
-        }
-    }
-
-    public sealed class PluginDirectoryListSettingItem : PluginSettingItem
-    {
-        private PluginDirectoryListSettingItem(
-            string key,
-            string label,
-            string? description,
-            IReadOnlyList<string> directories)
-            : base(key, label, description)
-        {
-            Directories = new ObservableCollection<string>(directories);
-        }
-
-        public ObservableCollection<string> Directories { get; }
-
-        public override string SerializeValue()
-        {
-            return JsonSerializer.Serialize(Directories);
-        }
-
-        public void AddDirectory(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return;
-            }
-
-            if (Directories.Contains(path, StringComparer.OrdinalIgnoreCase))
-            {
-                return;
-            }
-
-            Directories.Add(path);
-        }
-
-        public void RemoveDirectory(string path)
-        {
-            var existing = Directories.FirstOrDefault(item => item.Equals(path, StringComparison.OrdinalIgnoreCase));
-            if (existing is null)
-            {
-                return;
-            }
-
-            Directories.Remove(existing);
-        }
-
-        public static PluginDirectoryListSettingItem From(PluginDirectoryListSettingDefinition definition, string? storedValue)
-        {
-            var directories = new List<string>();
-            if (!string.IsNullOrWhiteSpace(storedValue))
-            {
-                try
-                {
-                    directories = JsonSerializer.Deserialize<List<string>>(storedValue) ?? [];
-                }
-                catch
-                {
-                }
-            }
-
-            directories = directories
-                .Where(path => !string.IsNullOrWhiteSpace(path))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            return new PluginDirectoryListSettingItem(
-                definition.Key,
-                definition.Label,
-                definition.Description,
-                directories);
-        }
-    }
-
-    public sealed class PluginUnknownSettingItem : PluginSettingItem
-    {
-        public PluginUnknownSettingItem(string key, string label, string? description)
-            : base(key, label, description)
-        {
-        }
-
-        public override string SerializeValue()
-        {
-            return string.Empty;
-        }
-    }
 }

@@ -8,4 +8,5 @@ public sealed record PluginSearchItem(
     string Glyph,
     double Score = 0,
     bool RequiresConfirmation = false,
-    string? ConfirmationMessage = null);
+    string? ConfirmationMessage = null,
+    string? IconPath = null);

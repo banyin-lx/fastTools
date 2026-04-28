@@ -1,4 +1,5 @@
 using System.IO;
+using FastTools.App.Infrastructure;
 using FastTools.App.Providers;
 using FastTools.App.Services;
 using System.Windows;
@@ -36,8 +37,17 @@ public partial class App : System.Windows.Application
 
         SettingsStore = new LauncherSettingsStore();
         await SettingsStore.LoadAsync();
+        LogService.Instance.MinLevel = SettingsStore.Current.MinLogLevel;
+        LogService.Instance.IsEnabled = SettingsStore.Current.LoggingEnabled;
+        SettingsStore.SettingsChanged += (_, settings) =>
+        {
+            LogService.Instance.MinLevel = settings.MinLogLevel;
+            LogService.Instance.IsEnabled = settings.LoggingEnabled;
+        };
         _localizationService = new LocalizationService();
         _localizationService.Apply(SettingsStore.Current.Language);
+        LogService.Instance.Localizer = _localizationService;
+        LogService.Instance.InfoKey("App", "Log.App.Starting", AppInfo.Version);
 
         var themeService = new ThemeService(this);
         themeService.Apply(SettingsStore.Current.ThemeMode);
@@ -49,7 +59,7 @@ public partial class App : System.Windows.Application
 
         var searchService = new SearchService(
         [
-            new ApplicationSearchProvider(appIndexService),
+            new ApplicationSearchProvider(appIndexService, SettingsStore),
             new CustomCommandSearchProvider(SettingsStore),
             new PluginSearchProvider(pluginHostService),
         ], SettingsStore, _localizationService);
@@ -88,6 +98,7 @@ public partial class App : System.Windows.Application
 
     private void App_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
     {
+        LogService.Instance.ErrorKey("App", "Log.App.UnhandledException", e.Exception);
         try
         {
             var appDataPath = Path.Combine(

@@ -8,10 +8,12 @@ namespace FastTools.App.Providers;
 public sealed class ApplicationSearchProvider : ISearchProvider
 {
     private readonly ApplicationIndexService _indexService;
+    private readonly LauncherSettingsStore _settingsStore;
 
-    public ApplicationSearchProvider(ApplicationIndexService indexService)
+    public ApplicationSearchProvider(ApplicationIndexService indexService, LauncherSettingsStore settingsStore)
     {
         _indexService = indexService;
+        _settingsStore = settingsStore;
     }
 
     public Task<IReadOnlyList<SearchResultItem>> SearchAsync(string query, CancellationToken cancellationToken)
@@ -22,6 +24,7 @@ public sealed class ApplicationSearchProvider : ISearchProvider
         var normalizedQuery = SearchMatcher.Normalize(query);
         var limit = isBlankQuery ? 6 : 12;
         var matches = new List<(ApplicationEntry Entry, double Score)>(limit);
+        var hideShortcuts = _settingsStore.Current.HideShortcutResults;
 
         for (var index = 0; index < entries.Count; index++)
         {
@@ -31,6 +34,12 @@ public sealed class ApplicationSearchProvider : ISearchProvider
             }
 
             var entry = entries[index];
+
+            if (hideShortcuts && IsShortcut(entry))
+            {
+                continue;
+            }
+
             var score = isBlankQuery
                 ? 12
                 : SearchMatcher.ScoreNormalized(
@@ -120,6 +129,13 @@ public sealed class ApplicationSearchProvider : ISearchProvider
             UseShellExecute = true,
         });
         return Task.CompletedTask;
+    }
+
+    private static bool IsShortcut(ApplicationEntry entry)
+    {
+        return !entry.IsPackagedApp
+            && !string.IsNullOrEmpty(entry.LaunchTarget)
+            && entry.LaunchTarget.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void InsertTopMatch(

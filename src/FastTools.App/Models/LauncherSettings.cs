@@ -5,6 +5,8 @@ namespace FastTools.App.Models;
 
 public sealed class LauncherSettings
 {
+    public const int DefaultSearchDebounceMilliseconds = 120;
+
     public string HotKey { get; set; } = "Alt+Space";
 
     public AppThemeMode ThemeMode { get; set; } = AppThemeMode.Dark;
@@ -13,6 +15,16 @@ public sealed class LauncherSettings
     public string Language { get; set; } = "zh-CN";
 
     public string DefaultSearchEngine { get; set; } = "Bing";
+
+    public bool HideShortcutResults { get; set; }
+
+    public bool SearchDebounceEnabled { get; set; } = true;
+
+    public int SearchDebounceMilliseconds { get; set; } = DefaultSearchDebounceMilliseconds;
+
+    public bool LoggingEnabled { get; set; } = true;
+
+    public LogLevel MinLogLevel { get; set; } = LogLevel.Info;
 
     public List<string> IndexedDirectories { get; set; } = [];
 
@@ -25,6 +37,12 @@ public sealed class LauncherSettings
     public List<PluginState> PluginStates { get; set; } = [];
 
     public List<SearchGroupPriority> SearchGroupPriorities { get; set; } = [];
+
+    public SearchBarHorizontalPosition HorizontalPosition { get; set; } = SearchBarHorizontalPosition.Center;
+
+    public SearchBarVerticalPosition VerticalPosition { get; set; } = SearchBarVerticalPosition.Top;
+
+    public SearchWindowPositionMode WindowPositionMode { get; set; } = SearchWindowPositionMode.RememberLast;
 
     public Dictionary<string, int> UsageCounts { get; set; } = [];
 
@@ -63,6 +81,11 @@ public sealed class LauncherSettings
             ThemeMode = ThemeMode,
             Language = Language,
             DefaultSearchEngine = DefaultSearchEngine,
+            HideShortcutResults = HideShortcutResults,
+            SearchDebounceEnabled = SearchDebounceEnabled,
+            SearchDebounceMilliseconds = SearchDebounceMilliseconds,
+            LoggingEnabled = LoggingEnabled,
+            MinLogLevel = MinLogLevel,
             IndexedDirectories = [.. IndexedDirectories],
             EverythingIndexedDirectories = [.. EverythingIndexedDirectories],
             ApplicationDirectories = [.. ApplicationDirectories],
@@ -96,16 +119,23 @@ public sealed class LauncherSettings
                     IsEnabled = priority.IsEnabled,
                 })
                 .ToList(),
+            HorizontalPosition = HorizontalPosition,
+            VerticalPosition = VerticalPosition,
+            WindowPositionMode = WindowPositionMode,
             UsageCounts = UsageCounts.ToDictionary(pair => pair.Key, pair => pair.Value),
         };
     }
 
     public void EnsureDefaults()
     {
+        if (SearchDebounceMilliseconds < 0)
+        {
+            SearchDebounceMilliseconds = DefaultSearchDebounceMilliseconds;
+        }
+
         if (SearchGroupPriorities is null || SearchGroupPriorities.Count == 0)
         {
             SearchGroupPriorities = BuildDefaultSearchGroupPriorities();
-            return;
         }
 
         // Merge any newly-known groups while preserving the user's existing order.

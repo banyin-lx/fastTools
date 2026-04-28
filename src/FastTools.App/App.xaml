@@ -110,13 +110,14 @@
         </Style>
 
         <Style x:Key="ModernScrollBarThumbVerticalStyle" TargetType="Thumb">
+            <Setter Property="MinHeight" Value="32" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Thumb">
-                        <Border Margin="1,0"
+                        <Border Margin="1"
                                 Background="{DynamicResource AccentBrush}"
-                                CornerRadius="999"
-                                Opacity="0.35" />
+                                CornerRadius="3"
+                                Opacity="0.65" />
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -124,14 +125,12 @@
 
         <Style TargetType="ScrollBar">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Width" Value="6" />
-            <Setter Property="Margin" Value="0,4" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ScrollBar">
                         <Grid x:Name="Root"
                               Background="Transparent"
-                              Opacity="0.5">
+                              Opacity="0.85">
                             <Track x:Name="PART_Track"
                                    IsDirectionReversed="True">
                                 <Track.DecreaseRepeatButton>
@@ -152,14 +151,22 @@
                                 <Setter TargetName="Root" Property="Opacity" Value="1" />
                             </Trigger>
                             <Trigger Property="Orientation" Value="Horizontal">
-                                <Setter Property="Height" Value="6" />
-                                <Setter Property="Width" Value="Auto" />
-                                <Setter Property="Margin" Value="4,0" />
+                                <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Vertical">
+                    <Setter Property="Width" Value="10" />
+                    <Setter Property="Margin" Value="0,4" />
+                </Trigger>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Height" Value="10" />
+                    <Setter Property="Margin" Value="4,0" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style TargetType="ComboBoxItem">
@@ -314,16 +321,19 @@
             <Setter Property="Background" Value="{DynamicResource ChromeBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="BorderThickness" Value="0,0,1,1" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Padding" Value="14,10" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
         </Style>
 
         <Style TargetType="DataGridCell">
-            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="BorderThickness" Value="0,0,1,0" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
             <Setter Property="Padding" Value="10,8" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
         </Style>
     </Application.Resources>
 </Application>

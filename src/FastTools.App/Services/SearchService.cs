@@ -35,7 +35,7 @@ public sealed class SearchService
             .OrderBy(item => _settingsStore.Current.GetPriorityForGroup(item.Group))
             .ThenByDescending(item => item.Score)
             .ThenBy(item => item.Title, StringComparer.CurrentCultureIgnoreCase)
-            .Take(string.IsNullOrWhiteSpace(normalizedQuery) ? 12 : 32)
+            .Take(string.IsNullOrWhiteSpace(normalizedQuery) ? 12 : 50)
             .ToList();
 
         return results;

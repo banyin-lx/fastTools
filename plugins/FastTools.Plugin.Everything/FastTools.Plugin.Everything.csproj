@@ -11,4 +11,11 @@
     <ProjectReference Include="..\..\src\FastTools.Plugin.Abstractions\FastTools.Plugin.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Native\Everything64.dll">
+      <Link>Everything64.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -6,6 +7,33 @@ namespace FastTools.Plugin.Everything;
 internal static class EverythingInterop
 {
     private const string DllName = "Everything64.dll";
+
+    static EverythingInterop()
+    {
+        // Ensure the bundled Everything64.dll (located next to the plugin assembly) is loaded
+        // even when WPF/host loads native libs from a different working directory.
+        NativeLibrary.SetDllImportResolver(typeof(EverythingInterop).Assembly, ResolveDll);
+    }
+
+    private static IntPtr ResolveDll(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
+    {
+        if (!libraryName.Equals(DllName, StringComparison.OrdinalIgnoreCase))
+        {
+            return IntPtr.Zero;
+        }
+
+        var pluginDir = Path.GetDirectoryName(assembly.Location);
+        if (!string.IsNullOrEmpty(pluginDir))
+        {
+            var bundled = Path.Combine(pluginDir, DllName);
+            if (File.Exists(bundled) && NativeLibrary.TryLoad(bundled, out var handle))
+            {
+                return handle;
+            }
+        }
+
+        return IntPtr.Zero;
+    }
 
     [DllImport(DllName, CharSet = CharSet.Unicode)]
     public static extern uint Everything_SetSearchW(string lpSearchString);
@@ -32,7 +60,7 @@ internal static class EverythingInterop
     [DllImport(DllName, CharSet = CharSet.Unicode)]
     public static extern void Everything_GetResultFullPathNameW(uint nIndex, StringBuilder lpString, uint nMaxCount);
 
-    [DllImport(DllName)]
+    [DllImport(DllName, EntryPoint = "Everything_IsFolderResult")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool Everything_IsResultFolder(uint nIndex);
 

@@ -1,3 +1,4 @@
+using FastTools.App.Infrastructure;
 using FastTools.App.Models;
 using FastTools.Plugin.Abstractions.Contracts;
 using System.Runtime.Loader;
@@ -37,7 +38,7 @@ public sealed class PluginHostService
 
         var loadedPluginIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var assemblyPath in Directory.EnumerateFiles(_pluginDirectory, "*.dll", SearchOption.AllDirectories))
+        foreach (var assemblyPath in Directory.EnumerateFiles(_pluginDirectory, "FastTools.Plugin.*.dll", SearchOption.AllDirectories))
         {
             try
             {
@@ -58,13 +59,42 @@ public sealed class PluginHostService
                         continue;
                     }
 
-                    _plugins.Add(new LoadedPlugin(plugin, assemblyPath));
+                    var loaded = new LoadedPlugin(plugin, assemblyPath);
+                    _plugins.Add(loaded);
                     UpsertPluginState(plugin);
+                    LogService.Instance.DebugKey(
+                        "Plugins",
+                        "Log.Plugins.Discovered",
+                        plugin.DisplayName, plugin.Id);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                LogService.Instance.WarnKey(
+                    "Plugins",
+                    "Log.Plugins.LoadFailed",
+                    assemblyPath, ex.Message);
             }
+        }
+
+        var enabled = _plugins.Where(IsEnabled).ToList();
+        LogService.Instance.InfoKey(
+            "Plugins",
+            "Log.Plugins.Summary",
+            _plugins.Count, enabled.Count);
+        foreach (var plugin in enabled)
+        {
+            LogService.Instance.InfoKey(
+                "Plugins",
+                "Log.Plugins.Activated",
+                plugin.Instance.DisplayName, plugin.Instance.Id);
+        }
+        foreach (var plugin in _plugins.Except(enabled))
+        {
+            LogService.Instance.DebugKey(
+                "Plugins",
+                "Log.Plugins.Disabled",
+                plugin.Instance.DisplayName, plugin.Instance.Id);
         }
 
         return Task.CompletedTask;
@@ -111,17 +141,20 @@ public sealed class PluginHostService
     {
         try
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             var items = await plugin.Instance.QueryAsync(
                 new PluginQuery(query, BuildPluginSettings(plugin)),
                 cancellationToken).ConfigureAwait(false);
+            sw.Stop();
 
-            return items.Select(item => new SearchResultItem
+            var mapped = items.Select(item => new SearchResultItem
             {
                 Key = $"plugin:{plugin.Instance.Id}:{item.Key}",
                 Title = item.Title,
                 Subtitle = item.Subtitle,
                 Group = item.Category,
                 Glyph = item.Glyph,
+                Icon = AppIconLoader.LoadFromPath(item.IconPath),
                 Score = item.Score,
                 RequiresConfirmation = item.RequiresConfirmation,
                 ConfirmationMessage = item.ConfirmationMessage,
@@ -129,9 +162,23 @@ public sealed class PluginHostService
                     new PluginExecutionRequest(item, BuildPluginSettings(plugin)),
                     ct),
             }).ToList();
+
+            LogService.Instance.DebugKey(
+                $"Plugin:{plugin.Instance.Id}",
+                "Log.Plugin.QueryResult",
+                query, mapped.Count, sw.ElapsedMilliseconds);
+            return mapped;
         }
-        catch
+        catch (OperationCanceledException)
         {
+            return [];
+        }
+        catch (Exception ex)
+        {
+            LogService.Instance.WarnKey(
+                $"Plugin:{plugin.Instance.Id}",
+                "Log.Plugin.QueryFailed",
+                query, ex.Message);
             return [];
         }
     }

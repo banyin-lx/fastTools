@@ -15,17 +15,28 @@ public static class AppIconLoader
 
     public static ImageSource? Load(ApplicationEntry entry)
     {
-        if (entry.IsPackagedApp)
-        {
-            return null;
-        }
-
         if (string.IsNullOrWhiteSpace(entry.LaunchTarget))
         {
             return null;
         }
 
+        if (entry.IsPackagedApp)
+        {
+            var key = $"appsfolder:{entry.LaunchTarget}";
+            return Cache.GetOrAdd(key, _ => LoadShellIcon($"shell:AppsFolder\\{entry.LaunchTarget}"));
+        }
+
         return Cache.GetOrAdd(entry.LaunchTarget, static path => LoadCore(path));
+    }
+
+    public static ImageSource? LoadFromPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        return Cache.GetOrAdd(path, static p => LoadCore(p));
     }
 
     private static ImageSource? LoadCore(string path)
@@ -110,5 +121,89 @@ public static class AppIconLoader
                 Marshal.ReleaseComObject(shell);
             }
         }
+    }
+
+    private static ImageSource? LoadShellIcon(string parsingName)
+    {
+        try
+        {
+            var iid = typeof(IShellItemImageFactory).GUID;
+            SHCreateItemFromParsingName(parsingName, IntPtr.Zero, iid, out var factory);
+            if (factory is null)
+            {
+                return null;
+            }
+
+            try
+            {
+                var size = new SIZE { cx = 32, cy = 32 };
+                var hr = factory.GetImage(size, SIIGBF.IconOnly | SIIGBF.BiggerSizeOk, out var hbitmap);
+                if (hr != 0 || hbitmap == IntPtr.Zero)
+                {
+                    return null;
+                }
+
+                try
+                {
+                    var source = Imaging.CreateBitmapSourceFromHBitmap(
+                        hbitmap,
+                        IntPtr.Zero,
+                        Int32Rect.Empty,
+                        BitmapSizeOptions.FromWidthAndHeight(20, 20));
+                    source.Freeze();
+                    return source;
+                }
+                finally
+                {
+                    DeleteObject(hbitmap);
+                }
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(factory);
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
+    private static extern void SHCreateItemFromParsingName(
+        [MarshalAs(UnmanagedType.LPWStr)] string pszPath,
+        IntPtr pbc,
+        [MarshalAs(UnmanagedType.LPStruct)] Guid riid,
+        [MarshalAs(UnmanagedType.Interface)] out IShellItemImageFactory ppv);
+
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeleteObject(IntPtr hObject);
+
+    [ComImport]
+    [Guid("BCC18B79-BA16-442F-80C4-8A59C30C463B")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IShellItemImageFactory
+    {
+        [PreserveSig]
+        int GetImage([In] SIZE size, [In] SIIGBF flags, out IntPtr phbm);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SIZE
+    {
+        public int cx;
+        public int cy;
+    }
+
+    [Flags]
+    private enum SIIGBF
+    {
+        ResizeToFit = 0x00,
+        BiggerSizeOk = 0x01,
+        MemoryOnly = 0x02,
+        IconOnly = 0x04,
+        ThumbnailOnly = 0x08,
+        InCacheOnly = 0x10,
     }
 }
