@@ -3,6 +3,13 @@ using System.Text.Json.Serialization;
 
 namespace FastTools.App.Models;
 
+public enum ResultMouseActivationMode
+{
+    SingleClick,
+    DoubleClick,
+    RightClick,
+}
+
 public sealed class LauncherSettings
 {
     public const int DefaultSearchDebounceMilliseconds = 120;
@@ -21,6 +28,10 @@ public sealed class LauncherSettings
     public bool SearchDebounceEnabled { get; set; } = true;
 
     public int SearchDebounceMilliseconds { get; set; } = DefaultSearchDebounceMilliseconds;
+
+    public ResultMouseActivationMode ResultMouseActivationMode { get; set; } = ResultMouseActivationMode.DoubleClick;
+
+    public string ResultKeyboardActivationGesture { get; set; } = "Enter";
 
     public bool LoggingEnabled { get; set; } = true;
 
@@ -84,6 +95,8 @@ public sealed class LauncherSettings
             HideShortcutResults = HideShortcutResults,
             SearchDebounceEnabled = SearchDebounceEnabled,
             SearchDebounceMilliseconds = SearchDebounceMilliseconds,
+            ResultMouseActivationMode = ResultMouseActivationMode,
+            ResultKeyboardActivationGesture = ResultKeyboardActivationGesture,
             LoggingEnabled = LoggingEnabled,
             MinLogLevel = MinLogLevel,
             IndexedDirectories = [.. IndexedDirectories],
@@ -131,6 +144,20 @@ public sealed class LauncherSettings
         if (SearchDebounceMilliseconds < 0)
         {
             SearchDebounceMilliseconds = DefaultSearchDebounceMilliseconds;
+        }
+
+        if (!Enum.IsDefined(ResultMouseActivationMode))
+        {
+            ResultMouseActivationMode = ResultMouseActivationMode.DoubleClick;
+        }
+
+        if (string.IsNullOrWhiteSpace(ResultKeyboardActivationGesture))
+        {
+            ResultKeyboardActivationGesture = "Enter";
+        }
+        else if (HotKeyGesture.TryParse(ResultKeyboardActivationGesture, out var resultActivationGesture) && resultActivationGesture is not null)
+        {
+            ResultKeyboardActivationGesture = resultActivationGesture.ToString();
         }
 
         if (SearchGroupPriorities is null || SearchGroupPriorities.Count == 0)

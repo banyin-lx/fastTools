@@ -157,11 +157,13 @@
             <Setter Property="MinWidth" Value="160" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Background" Value="{DynamicResource ElevatedBrush}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
             <Style.Triggers>
                 <Trigger Property="IsKeyboardFocusWithin" Value="True">
                     <Setter Property="Background" Value="{DynamicResource SelectionBrush}" />
                     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-                    <Setter Property="BorderThickness" Value="2" />
                     <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
                 </Trigger>
             </Style.Triggers>
@@ -517,7 +519,7 @@
                                   Grid.Row="1"
                                   Margin="0,22,0,0"
                                   HorizontalScrollBarVisibility="Disabled"
-                                  VerticalScrollBarVisibility="Hidden">
+                                  VerticalScrollBarVisibility="Auto">
                         <Grid>
                             <StackPanel Visibility="{Binding GeneralSectionVisibility}">
                                 <Border Style="{StaticResource SettingsCardCompactStyle}">
@@ -691,6 +693,51 @@
                                                   SelectedValue="{Binding SelectedWindowPositionMode}"
                                                   SelectedValuePath="Value" />
                                     </Grid>
+                                </Border>
+                                <Border Style="{StaticResource SettingsCardCompactStyle}">
+                                    <Expander IsExpanded="{Binding IsResultActivationExpanded}">
+                                        <Expander.Header>
+                                            <TextBlock Text="{Binding Localizer[Settings.ResultActivation.Title], RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       FontWeight="SemiBold" />
+                                        </Expander.Header>
+                                        <StackPanel Margin="0,12,0,0">
+                                            <TextBlock Margin="0,0,0,12"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       Text="{Binding Localizer[Settings.ResultActivation.Desc], RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       TextWrapping="Wrap" />
+                                            <Grid Margin="0,0,0,10">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="260" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock VerticalAlignment="Center"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                                           Text="{Binding Localizer[Settings.ResultActivation.Mouse], RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                <ComboBox Grid.Column="1"
+                                                          DisplayMemberPath="Label"
+                                                          ItemsSource="{Binding ResultMouseActivationOptions}"
+                                                          SelectedValue="{Binding SelectedResultMouseActivationMode}"
+                                                          SelectedValuePath="Value" />
+                                            </Grid>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock VerticalAlignment="Center"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                                           Text="{Binding Localizer[Settings.ResultActivation.Keyboard], RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                <Button x:Name="ResultKeyboardActivationButton"
+                                                        Grid.Column="1"
+                                                        Click="ResultKeyboardActivationButton_Click"
+                                                        Content="{Binding ResultKeyboardActivationGestureText}"
+                                                        PreviewKeyDown="ResultKeyboardActivationButton_PreviewKeyDown"
+                                                        Style="{StaticResource HotKeyCaptureButtonStyle}" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Expander>
                                 </Border>
                                 <Border Style="{StaticResource SettingsCardCompactStyle}">
                                     <Expander IsExpanded="{Binding IsPositionExpanded}">

@@ -173,7 +173,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _nativeInteropInitialized = true;
     }
 
-    private bool TryRegisterHotKey(bool showErrorDialog)
+    private bool TryRegisterHotKey(bool showErrorDialog, bool logOutcome = true)
     {
         EnsureNativeInteropInitialized();
 
@@ -183,10 +183,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             _isHotKeyRegistered = true;
             ShowInTaskbar = false;
-            FastTools.App.Services.LogService.Instance.InfoKey(
-                "HotKey",
-                "Log.HotKey.Registered",
-                gesture);
+            if (logOutcome)
+            {
+                FastTools.App.Services.LogService.Instance.InfoKey(
+                    "HotKey",
+                    "Log.HotKey.Registered",
+                    gesture);
+            }
+
             return true;
         }
 
@@ -195,10 +199,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var localizedError = string.IsNullOrEmpty(errorMessage)
             ? string.Empty
             : _localizer.Get(errorMessage);
-        FastTools.App.Services.LogService.Instance.ErrorKey(
-            "HotKey",
-            "Log.HotKey.RegisterFailed",
-            gesture, localizedError);
+        if (logOutcome)
+        {
+            FastTools.App.Services.LogService.Instance.ErrorKey(
+                "HotKey",
+                "Log.HotKey.RegisterFailed",
+                gesture, localizedError);
+        }
 
         if (showErrorDialog)
         {
@@ -264,7 +271,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        if (e.Key == Key.Enter)
+        if (MatchesResultActivationGesture(e))
         {
             await ExecuteSelectedAsync(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
             e.Handled = true;
@@ -296,7 +303,54 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async void ResultsList_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
+        if (_settingsStore.Current.ResultMouseActivationMode != ResultMouseActivationMode.DoubleClick)
+        {
+            return;
+        }
+
         await ExecuteSelectedAsync(false);
+    }
+
+    private async void ResultsList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_settingsStore.Current.ResultMouseActivationMode != ResultMouseActivationMode.SingleClick)
+        {
+            return;
+        }
+
+        if (FindResultItemFromSource(e.OriginalSource as DependencyObject) is not SearchResultItem item)
+        {
+            return;
+        }
+
+        if (!ReferenceEquals(SelectedResult, item))
+        {
+            SelectedResult = item;
+        }
+
+        await ExecuteSelectedAsync(false);
+        e.Handled = true;
+    }
+
+    private async void ResultsList_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_settingsStore.Current.ResultMouseActivationMode != ResultMouseActivationMode.RightClick)
+        {
+            return;
+        }
+
+        if (FindResultItemFromSource(e.OriginalSource as DependencyObject) is not SearchResultItem item)
+        {
+            return;
+        }
+
+        if (!ReferenceEquals(SelectedResult, item))
+        {
+            SelectedResult = item;
+        }
+
+        await ExecuteSelectedAsync(false);
+        e.Handled = true;
     }
 
     private async Task SearchAsync(string query)
@@ -401,20 +455,60 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ResultsList.ScrollIntoView(SelectedResult);
     }
 
+    private bool MatchesResultActivationGesture(System.Windows.Input.KeyEventArgs e)
+    {
+        if (!HotKeyGesture.TryParse(_settingsStore.Current.ResultKeyboardActivationGesture, out var gesture) || gesture is null)
+        {
+            return e.Key == Key.Enter;
+        }
+
+        var actualKey = GetActualKey(e);
+        return actualKey == gesture.Key && Keyboard.Modifiers == gesture.Modifiers;
+    }
+
+    private static Key GetActualKey(System.Windows.Input.KeyEventArgs e)
+    {
+        return e.Key switch
+        {
+            Key.System => e.SystemKey,
+            Key.ImeProcessed => e.ImeProcessedKey,
+            Key.DeadCharProcessed => e.DeadCharProcessedKey,
+            _ => e.Key,
+        };
+    }
+
+    private static SearchResultItem? FindResultItemFromSource(DependencyObject? source)
+    {
+        while (source is not null)
+        {
+            if (source is FrameworkElement { DataContext: SearchResultItem item })
+            {
+                return item;
+            }
+
+            source = source is Visual or System.Windows.Media.Media3D.Visual3D
+                ? VisualTreeHelper.GetParent(source)
+                : LogicalTreeHelper.GetParent(source);
+        }
+
+        return null;
+    }
+
     private async Task ExecuteSelectedAsync(bool runAsAdmin)
     {
-        if (SelectedResult is null)
+        var selectedResult = SelectedResult;
+        if (selectedResult is null)
         {
             return;
         }
 
-        if (SelectedResult.RequiresConfirmation)
+        if (selectedResult.RequiresConfirmation)
         {
             _suspendAutoHide = true;
             try
             {
                 var result = System.Windows.MessageBox.Show(
-                    SelectedResult.ConfirmationMessage ?? _localizer.Get("Main.ActionConfirm"),
+                    selectedResult.ConfirmationMessage ?? _localizer.Get("Main.ActionConfirm"),
                     _localizer.Get("Main.HotKeyError.Title"),
                     System.Windows.MessageBoxButton.OKCancel,
                     System.Windows.MessageBoxImage.Warning);
@@ -431,16 +525,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         try
         {
-            if (runAsAdmin && SelectedResult.SupportsRunAsAdmin && SelectedResult.ExecuteAsAdminAsync is not null)
+            if (runAsAdmin && selectedResult.SupportsRunAsAdmin && selectedResult.ExecuteAsAdminAsync is not null)
             {
-                await SelectedResult.ExecuteAsAdminAsync(CancellationToken.None);
+                await selectedResult.ExecuteAsAdminAsync(CancellationToken.None);
             }
             else
             {
-                await SelectedResult.ExecuteAsync(CancellationToken.None);
+                await selectedResult.ExecuteAsync(CancellationToken.None);
             }
 
-            await _searchService.RecordUsageAsync(SelectedResult);
+            await _searchService.RecordUsageAsync(selectedResult);
             HideLauncher();
         }
         catch (Exception exception)
@@ -462,6 +556,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _suspendAutoHide = true;
         _hotKeyService.Unregister();
         _isHotKeyRegistered = false;
+        var settingsConfirmed = false;
 
         try
         {
@@ -478,6 +573,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 return;
             }
 
+            settingsConfirmed = true;
             await _settingsStore.SaveAsync(settingsWindow.SavedSettings);
             // Reset cached position so new horizontal/vertical settings take effect on next show
             _lastWindowLeft = 0;
@@ -499,7 +595,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         finally
         {
-            TryRegisterHotKey(showErrorDialog: true);
+            TryRegisterHotKey(showErrorDialog: settingsConfirmed, logOutcome: settingsConfirmed);
             _suspendAutoHide = false;
         }
     }

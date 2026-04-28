@@ -74,6 +74,8 @@
                              Background="Transparent"
                              BorderThickness="0"
                              ItemsSource="{Binding ResultsView}"
+                             PreviewMouseLeftButtonUp="ResultsList_PreviewMouseLeftButtonUp"
+                             PreviewMouseRightButtonUp="ResultsList_PreviewMouseRightButtonUp"
                              PreviewMouseDoubleClick="ResultsList_PreviewMouseDoubleClick"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              ScrollViewer.CanContentScroll="False"

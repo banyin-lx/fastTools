@@ -31,7 +31,7 @@ public sealed class HotKeyGesture
             parts.Add("Win");
         }
 
-        parts.Add(Key.ToString());
+        parts.Add(GetDisplayKeyName(Key));
         return string.Join("+", parts);
     }
 
@@ -70,6 +70,23 @@ public sealed class HotKeyGesture
                 case "windows":
                     modifiers |= ModifierKeys.Windows;
                     break;
+                case "enter":
+                    key = Key.Return;
+                    break;
+                case "esc":
+                    key = Key.Escape;
+                    break;
+                case "del":
+                    key = Key.Delete;
+                    break;
+                case "pgup":
+                case "pageup":
+                    key = Key.PageUp;
+                    break;
+                case "pgdn":
+                case "pagedown":
+                    key = Key.PageDown;
+                    break;
                 default:
                     var converter = new KeyConverter();
                     if (converter.ConvertFromString(token) is not Key parsedKey)
@@ -106,5 +123,18 @@ public sealed class HotKeyGesture
             Key.LeftAlt or Key.RightAlt or
             Key.LeftShift or Key.RightShift or
             Key.LWin or Key.RWin;
+    }
+
+    private static string GetDisplayKeyName(Key key)
+    {
+        return key switch
+        {
+            Key.Return => "Enter",
+            Key.Escape => "Esc",
+            Key.Delete => "Del",
+            Key.PageUp => "PageUp",
+            Key.PageDown => "PageDown",
+            _ => key.ToString(),
+        };
     }
 }

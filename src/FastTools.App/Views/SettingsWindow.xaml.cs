@@ -18,9 +18,6 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 {
     private readonly LauncherSettings _baseSettings;
     private readonly LocalizationService _localizer;
-    private readonly ThemeService _themeService;
-    private readonly AppThemeMode _originalTheme;
-    private readonly string _originalLanguage;
     private CustomCommandDefinition? _selectedCustomCommand;
     private SearchGroupPriorityItem? _selectedSearchGroupPriority;
     private SettingsSectionItem? _selectedSection;
@@ -31,9 +28,12 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     private SearchBarVerticalPosition _selectedVerticalPosition;
     private SearchWindowPositionMode _selectedWindowPositionMode;
     private bool _isPositionExpanded = true;
+    private bool _isResultActivationExpanded = true;
     private bool _hideShortcutResults;
     private bool _searchDebounceEnabled = true;
     private string _searchDebounceMillisecondsText = LauncherSettings.DefaultSearchDebounceMilliseconds.ToString();
+    private ResultMouseActivationMode _selectedResultMouseActivationMode = ResultMouseActivationMode.DoubleClick;
+    private string _resultKeyboardActivationGestureText = "Enter";
     private bool _loggingEnabled = true;
     private LogLevel _selectedLogLevel = LogLevel.Info;
 
@@ -47,9 +47,6 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         _baseSettings.EnsureDefaults();
         settings = _baseSettings.Clone();
         _localizer = localizer;
-        _themeService = themeService;
-        _originalTheme = themeService.CurrentTheme;
-        _originalLanguage = localizer.CurrentLanguage;
 
         ThemeOptions =
         [
@@ -86,6 +83,13 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
             new OptionItem<SearchWindowPositionMode> { Value = SearchWindowPositionMode.RememberLast, Label = _localizer.Get("WindowPosition.RememberLast") },
             new OptionItem<SearchWindowPositionMode> { Value = SearchWindowPositionMode.FollowMouse, Label = _localizer.Get("WindowPosition.FollowMouse") },
             new OptionItem<SearchWindowPositionMode> { Value = SearchWindowPositionMode.PrimaryMonitor, Label = _localizer.Get("WindowPosition.PrimaryMonitor") },
+        ];
+
+        ResultMouseActivationOptions =
+        [
+            new OptionItem<ResultMouseActivationMode> { Value = ResultMouseActivationMode.SingleClick, Label = _localizer.Get("Settings.ResultActivation.Mouse.SingleClick") },
+            new OptionItem<ResultMouseActivationMode> { Value = ResultMouseActivationMode.DoubleClick, Label = _localizer.Get("Settings.ResultActivation.Mouse.DoubleClick") },
+            new OptionItem<ResultMouseActivationMode> { Value = ResultMouseActivationMode.RightClick, Label = _localizer.Get("Settings.ResultActivation.Mouse.RightClick") },
         ];
 
         Sections =
@@ -130,6 +134,8 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         HideShortcutResults = settings.HideShortcutResults;
         SearchDebounceEnabled = settings.SearchDebounceEnabled;
         SearchDebounceMillisecondsText = settings.SearchDebounceMilliseconds.ToString();
+        SelectedResultMouseActivationMode = settings.ResultMouseActivationMode;
+        ResultKeyboardActivationGestureText = settings.ResultKeyboardActivationGesture;
         LoggingEnabled = settings.LoggingEnabled;
         SelectedLogLevel = settings.MinLogLevel;
 
@@ -166,6 +172,8 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
     public IReadOnlyList<OptionItem<SearchWindowPositionMode>> SearchWindowPositionOptions { get; }
 
+    public IReadOnlyList<OptionItem<ResultMouseActivationMode>> ResultMouseActivationOptions { get; }
+
     public bool IsPositionExpanded
     {
         get => _isPositionExpanded;
@@ -177,6 +185,21 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
             }
 
             _isPositionExpanded = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsResultActivationExpanded
+    {
+        get => _isResultActivationExpanded;
+        set
+        {
+            if (_isResultActivationExpanded == value)
+            {
+                return;
+            }
+
+            _isResultActivationExpanded = value;
             OnPropertyChanged();
         }
     }
@@ -216,7 +239,6 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
             _selectedTheme = value;
             OnPropertyChanged();
-            _themeService.Apply(value);
         }
     }
 
@@ -232,8 +254,6 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
             _selectedLanguage = value ?? LocalizationService.DefaultLanguageCode;
             OnPropertyChanged();
-            _localizer.Apply(_selectedLanguage);
-            RefreshLocalization();
         }
     }
 
@@ -284,6 +304,36 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     }
 
     public Visibility SearchDebounceSettingsVisibility => SearchDebounceEnabled ? Visibility.Visible : Visibility.Collapsed;
+
+    public ResultMouseActivationMode SelectedResultMouseActivationMode
+    {
+        get => _selectedResultMouseActivationMode;
+        set
+        {
+            if (_selectedResultMouseActivationMode == value)
+            {
+                return;
+            }
+
+            _selectedResultMouseActivationMode = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string ResultKeyboardActivationGestureText
+    {
+        get => _resultKeyboardActivationGestureText;
+        set
+        {
+            if (string.Equals(_resultKeyboardActivationGestureText, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _resultKeyboardActivationGestureText = value;
+            OnPropertyChanged();
+        }
+    }
 
     public bool LoggingEnabled
     {
@@ -585,19 +635,6 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
     protected override void OnClosed(EventArgs e)
     {
-        if (SavedSettings is null)
-        {
-            if (_themeService.CurrentTheme != _originalTheme)
-            {
-                _themeService.Apply(_originalTheme);
-            }
-
-            if (!string.Equals(_localizer.CurrentLanguage, _originalLanguage, StringComparison.OrdinalIgnoreCase))
-            {
-                _localizer.Apply(_originalLanguage);
-            }
-        }
-
         base.OnClosed(e);
     }
 
@@ -649,6 +686,29 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
 
         var modifiers = Keyboard.Modifiers;
         HotKeyText = new HotKeyGesture
+        {
+            Modifiers = modifiers,
+            Key = key,
+        }.ToString();
+        e.Handled = true;
+    }
+
+    private void ResultKeyboardActivationButton_Click(object sender, RoutedEventArgs e)
+    {
+        ResultKeyboardActivationButton.Focus();
+    }
+
+    private void ResultKeyboardActivationButton_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        var key = GetActualKey(e);
+        if (IsModifierKey(key))
+        {
+            e.Handled = true;
+            return;
+        }
+
+        var modifiers = Keyboard.Modifiers;
+        ResultKeyboardActivationGestureText = new HotKeyGesture
         {
             Modifiers = modifiers,
             Key = key,
@@ -901,6 +961,16 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
             return;
         }
 
+        if (!HotKeyGesture.TryParse(ResultKeyboardActivationGestureText, out _))
+        {
+            System.Windows.MessageBox.Show(
+                _localizer.Get("Settings.InvalidResultKeyboardActivationGesture"),
+                _localizer.Get("Settings.Title"),
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Warning);
+            return;
+        }
+
         if (SearchDebounceEnabled &&
             (!int.TryParse(SearchDebounceMillisecondsText, out var searchDebounceMilliseconds) || searchDebounceMilliseconds < 0))
         {
@@ -926,6 +996,8 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         SavedSettings.HideShortcutResults = HideShortcutResults;
         SavedSettings.SearchDebounceEnabled = SearchDebounceEnabled;
         SavedSettings.SearchDebounceMilliseconds = validatedSearchDebounceMilliseconds;
+        SavedSettings.ResultMouseActivationMode = SelectedResultMouseActivationMode;
+        SavedSettings.ResultKeyboardActivationGesture = ResultKeyboardActivationGestureText;
         SavedSettings.LoggingEnabled = LoggingEnabled;
         SavedSettings.MinLogLevel = SelectedLogLevel;
         SavedSettings.CustomCommands = CustomCommands
