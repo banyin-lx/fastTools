@@ -25,6 +25,8 @@ public sealed class LauncherSettings
 
     public bool HideShortcutResults { get; set; }
 
+    public bool AlwaysOnTop { get; set; }
+
     public bool SearchDebounceEnabled { get; set; } = true;
 
     public int SearchDebounceMilliseconds { get; set; } = DefaultSearchDebounceMilliseconds;
@@ -93,6 +95,7 @@ public sealed class LauncherSettings
             Language = Language,
             DefaultSearchEngine = DefaultSearchEngine,
             HideShortcutResults = HideShortcutResults,
+            AlwaysOnTop = AlwaysOnTop,
             SearchDebounceEnabled = SearchDebounceEnabled,
             SearchDebounceMilliseconds = SearchDebounceMilliseconds,
             ResultMouseActivationMode = ResultMouseActivationMode,

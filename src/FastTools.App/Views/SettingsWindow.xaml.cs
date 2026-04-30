@@ -30,6 +30,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
     private bool _isPositionExpanded = true;
     private bool _isResultActivationExpanded = true;
     private bool _hideShortcutResults;
+    private bool _alwaysOnTop;
     private bool _searchDebounceEnabled = true;
     private string _searchDebounceMillisecondsText = LauncherSettings.DefaultSearchDebounceMilliseconds.ToString();
     private ResultMouseActivationMode _selectedResultMouseActivationMode = ResultMouseActivationMode.DoubleClick;
@@ -132,6 +133,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         SelectedVerticalPosition = settings.VerticalPosition;
         SelectedWindowPositionMode = settings.WindowPositionMode;
         HideShortcutResults = settings.HideShortcutResults;
+        AlwaysOnTop = settings.AlwaysOnTop;
         SearchDebounceEnabled = settings.SearchDebounceEnabled;
         SearchDebounceMillisecondsText = settings.SearchDebounceMilliseconds.ToString();
         SelectedResultMouseActivationMode = settings.ResultMouseActivationMode;
@@ -268,6 +270,21 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
             }
 
             _hideShortcutResults = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool AlwaysOnTop
+    {
+        get => _alwaysOnTop;
+        set
+        {
+            if (_alwaysOnTop == value)
+            {
+                return;
+            }
+
+            _alwaysOnTop = value;
             OnPropertyChanged();
         }
     }
@@ -994,6 +1011,7 @@ public partial class SettingsWindow : Window, INotifyPropertyChanged
         SavedSettings.VerticalPosition = SelectedVerticalPosition;
         SavedSettings.WindowPositionMode = SelectedWindowPositionMode;
         SavedSettings.HideShortcutResults = HideShortcutResults;
+        SavedSettings.AlwaysOnTop = AlwaysOnTop;
         SavedSettings.SearchDebounceEnabled = SearchDebounceEnabled;
         SavedSettings.SearchDebounceMilliseconds = validatedSearchDebounceMilliseconds;
         SavedSettings.ResultMouseActivationMode = SelectedResultMouseActivationMode;

@@ -611,13 +611,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ToggleVisibility(bool forceShow = false)
     {
+        var shouldStayOnTop = _settingsStore.Current.AlwaysOnTop;
+
         if (!_isHotKeyRegistered)
         {
             PositionLauncher();
+            Topmost = shouldStayOnTop;
             Show();
             WindowState = WindowState.Normal;
             ShowInTaskbar = false;
             Activate();
+            if (!shouldStayOnTop)
+            {
+                Topmost = true;
+                Topmost = false;
+            }
             SearchBox.Focus();
             SearchBox.SelectAll();
             return;
@@ -630,11 +638,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         PositionLauncher();
+        Topmost = shouldStayOnTop;
         Show();
         ShowInTaskbar = false;
         Activate();
-        Topmost = true;
-        Topmost = false;
+        if (!shouldStayOnTop)
+        {
+            Topmost = true;
+            Topmost = false;
+        }
         SearchBox.Focus();
         SearchBox.SelectAll();
     }

@@ -579,6 +579,85 @@
                                     </Grid>
                                 </Border>
                                 <Border Style="{StaticResource SettingsCardCompactStyle}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                                       Text="{Binding Localizer[Settings.AlwaysOnTop], RelativeSource={RelativeSource AncestorType=Window}}" />
+                                            <TextBlock Margin="0,4,0,0"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       Text="{Binding Localizer[Settings.AlwaysOnTop.Desc], RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <ToggleButton Grid.Column="1"
+                                                      Margin="14,0,0,0"
+                                                      VerticalAlignment="Center"
+                                                      IsChecked="{Binding AlwaysOnTop}"
+                                                      Style="{StaticResource PluginToggleButtonStyle}" />
+                                    </Grid>
+                                </Border>
+                                <Border Style="{StaticResource SettingsCardCompactStyle}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="260" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock VerticalAlignment="Center"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                   Text="{Binding Localizer[Settings.WindowPosition.Title], RelativeSource={RelativeSource AncestorType=Window}}" />
+                                        <ComboBox Grid.Column="1"
+                                                  DisplayMemberPath="Label"
+                                                  ItemsSource="{Binding SearchWindowPositionOptions}"
+                                                  SelectedValue="{Binding SelectedWindowPositionMode}"
+                                                  SelectedValuePath="Value" />
+                                    </Grid>
+                                </Border>
+                                <Border Style="{StaticResource SettingsCardCompactStyle}">
+                                    <Expander IsExpanded="{Binding IsPositionExpanded}">
+                                        <Expander.Header>
+                                            <TextBlock Text="{Binding Localizer[Settings.SearchBarPosition.Title], RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       FontWeight="SemiBold" />
+                                        </Expander.Header>
+                                        <StackPanel Margin="0,12,0,0">
+                                            <Grid Margin="0,0,0,10">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="260" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock VerticalAlignment="Center"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                                           Text="{Binding Localizer[Settings.SearchBarPosition.Horizontal], RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                <ComboBox Grid.Column="1"
+                                                          DisplayMemberPath="Label"
+                                                          ItemsSource="{Binding SearchBarHorizontalOptions}"
+                                                          SelectedValue="{Binding SelectedHorizontalPosition}"
+                                                          SelectedValuePath="Value" />
+                                            </Grid>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="260" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock VerticalAlignment="Center"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                                           Text="{Binding Localizer[Settings.SearchBarPosition.Vertical], RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                <ComboBox Grid.Column="1"
+                                                          DisplayMemberPath="Label"
+                                                          ItemsSource="{Binding SearchBarVerticalOptions}"
+                                                          SelectedValue="{Binding SelectedVerticalPosition}"
+                                                          SelectedValuePath="Value" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Expander>
+                                </Border>
+                                <Border Style="{StaticResource SettingsCardCompactStyle}">
                                     <StackPanel>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -678,23 +757,6 @@
                                     </Grid>
                                 </Border>
                                 <Border Style="{StaticResource SettingsCardCompactStyle}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="260" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock VerticalAlignment="Center"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextPrimaryBrush}"
-                                                   Text="{Binding Localizer[Settings.WindowPosition.Title], RelativeSource={RelativeSource AncestorType=Window}}" />
-                                        <ComboBox Grid.Column="1"
-                                                  DisplayMemberPath="Label"
-                                                  ItemsSource="{Binding SearchWindowPositionOptions}"
-                                                  SelectedValue="{Binding SelectedWindowPositionMode}"
-                                                  SelectedValuePath="Value" />
-                                    </Grid>
-                                </Border>
-                                <Border Style="{StaticResource SettingsCardCompactStyle}">
                                     <Expander IsExpanded="{Binding IsResultActivationExpanded}">
                                         <Expander.Header>
                                             <TextBlock Text="{Binding Localizer[Settings.ResultActivation.Title], RelativeSource={RelativeSource AncestorType=Window}}"
@@ -735,46 +797,6 @@
                                                         Content="{Binding ResultKeyboardActivationGestureText}"
                                                         PreviewKeyDown="ResultKeyboardActivationButton_PreviewKeyDown"
                                                         Style="{StaticResource HotKeyCaptureButtonStyle}" />
-                                            </Grid>
-                                        </StackPanel>
-                                    </Expander>
-                                </Border>
-                                <Border Style="{StaticResource SettingsCardCompactStyle}">
-                                    <Expander IsExpanded="{Binding IsPositionExpanded}">
-                                        <Expander.Header>
-                                            <TextBlock Text="{Binding Localizer[Settings.SearchBarPosition.Title], RelativeSource={RelativeSource AncestorType=Window}}"
-                                                       FontWeight="SemiBold" />
-                                        </Expander.Header>
-                                        <StackPanel Margin="0,12,0,0">
-                                            <Grid Margin="0,0,0,10">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="260" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock VerticalAlignment="Center"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextPrimaryBrush}"
-                                                           Text="{Binding Localizer[Settings.SearchBarPosition.Horizontal], RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                <ComboBox Grid.Column="1"
-                                                          DisplayMemberPath="Label"
-                                                          ItemsSource="{Binding SearchBarHorizontalOptions}"
-                                                          SelectedValue="{Binding SelectedHorizontalPosition}"
-                                                          SelectedValuePath="Value" />
-                                            </Grid>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="260" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock VerticalAlignment="Center"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextPrimaryBrush}"
-                                                           Text="{Binding Localizer[Settings.SearchBarPosition.Vertical], RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                <ComboBox Grid.Column="1"
-                                                          DisplayMemberPath="Label"
-                                                          ItemsSource="{Binding SearchBarVerticalOptions}"
-                                                          SelectedValue="{Binding SelectedVerticalPosition}"
-                                                          SelectedValuePath="Value" />
                                             </Grid>
                                         </StackPanel>
                                     </Expander>
@@ -955,15 +977,15 @@
                                                         Padding="14"
                                                         Background="{DynamicResource ElevatedBrush}"
                                                         CornerRadius="14">
-                                                    <Expander IsExpanded="{Binding IsExpanded}">
-                                                        <Expander.Header>
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="*" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                </Grid.ColumnDefinitions>
-                                                                <StackPanel Grid.Column="0"
-                                                                            Margin="0,0,10,0">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="88" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Expander Grid.Column="0"
+                                                                  IsExpanded="{Binding IsExpanded}">
+                                                            <Expander.Header>
+                                                                <StackPanel Margin="0,0,10,0">
                                                                     <TextBlock VerticalAlignment="Center"
                                                                                FontWeight="SemiBold"
                                                                                Foreground="{DynamicResource TextPrimaryBrush}"
@@ -973,21 +995,25 @@
                                                                                Text="{Binding Description}"
                                                                                TextWrapping="Wrap" />
                                                                 </StackPanel>
-                                                                <ToggleButton Grid.Column="1"
-                                                                              Margin="10,2,0,0"
-                                                                              VerticalAlignment="Center"
-                                                                              IsChecked="{Binding IsEnabled}"
-                                                                              Style="{StaticResource PluginToggleButtonStyle}" />
-                                                            </Grid>
-                                                        </Expander.Header>
-                                                        <StackPanel Margin="0,12,0,0">
-                                                            <ItemsControl ItemsSource="{Binding Settings}"
-                                                                          Visibility="{Binding HasSettingsVisibility}" />
-                                                            <TextBlock Foreground="{DynamicResource TextSecondaryBrush}"
-                                                                       Text="该插件暂无可配置项。"
-                                                                       Visibility="{Binding EmptySettingsVisibility}" />
-                                                        </StackPanel>
-                                                    </Expander>
+                                                            </Expander.Header>
+                                                            <StackPanel Margin="0,12,0,0">
+                                                                <ItemsControl ItemsSource="{Binding Settings}"
+                                                                              Visibility="{Binding HasSettingsVisibility}" />
+                                                                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                           Text="该插件暂无可配置项。"
+                                                                           Visibility="{Binding EmptySettingsVisibility}" />
+                                                            </StackPanel>
+                                                        </Expander>
+                                                        <Border Grid.Column="1"
+                                                                HorizontalAlignment="Right"
+                                                                VerticalAlignment="Top"
+                                                                Background="Transparent">
+                                                            <ToggleButton Margin="10,2,0,0"
+                                                                          VerticalAlignment="Center"
+                                                                          IsChecked="{Binding IsEnabled}"
+                                                                          Style="{StaticResource PluginToggleButtonStyle}" />
+                                                        </Border>
+                                                    </Grid>
                                                 </Border>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
